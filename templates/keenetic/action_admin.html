@@ -1,0 +1,110 @@
+
+<!-- table zwave_devices search -->
+[#if VIEW_MODE="search_keenetic_routers" || VIEW_MODE=""#]
+<div>
+<a href="?view_mode=edit_keenetic_routers&data_source=<#DATA_SOURCE#>" class="btn btn-default"><i class="glyphicon glyphicon-plus"></i> <#LANG_ADD#></a>
+&nbsp;&nbsp;
+ <!--# Кнопка 'Настройки'. #-->
+<a class="btn btn-default" href="#api_settings" data-toggle="collapse"><i class="glyphicon glyphicon-cog"></i></a>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;	
+	[#if CYCLERUN==1#]
+		<span class="label label-success" title="Статус цикла">Цикл запущен</span>
+	[#else#]
+		<span class="label label-danger" title="Статус цикла">Цикл остановлен</span>
+	[#endif#]
+  <!--# Кнопка 'Справка'. #-->
+     <a href="?view_mode=show_help" class="btn btn-default btn-sm float-right" title="Справка"><i class="glyphicon glyphicon-question-sign"></i></a>
+</div>
+[#else#]
+<a href="?view_mode=show_help" class="btn btn-default btn-sm float-right" title="Справка"><i class="glyphicon glyphicon-question-sign"></i></a>
+[#endif VIEW_MODE#]
+<div class="collapse" id='api_settings'>
+&nbsp;
+<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
+<fieldset>
+         <div class="form-group">
+            <div class="controls">
+				<label for="title" class="col-lg-1 control-label">
+				 Периодичность опроса:
+				 </label>
+				  <div class="col-lg-4"><input id="cycle_time" name="cycle_time" value="[#CYCLE_TIME#]" type="text" class="input"></div>
+               <input type="checkbox" name="log_debmes" value="1"[#if LOG_DEBMES="1"#] checked[#endif#]> 
+               <span class='text' data-toggle="tooltip" title="Запись обмена сообщениями между сервером и ТВ в отдельный лог-файл YYYY-mm-dd_keenetic.log.">Отладка  DebMes</span>
+            </div>
+         </div>
+<div class="form-actions">
+<button type="submit" name="subm" value="Submit" class="btn btn-primary"><#LANG_UPDATE#></button>
+<input type="hidden" name="view_mode" value="update_settings">
+<input type="hidden" name="mode" value="update">
+</div>
+</fieldset>
+</form>
+</div>
+
+ <!-- action usual -->
+ [#if DATA_SOURCE="keenetic_routers" || DATA_SOURCE=""#]
+ <!-- table keenetic_routers search -->
+ [#if VIEW_MODE="search_keenetic_routers" || VIEW_MODE=""#]
+  [#inc keenetic_routers_search_admin.html#]
+ [#endif VIEW_MODE#]
+ <!-- / table keenetic_routers search -->
+ 
+  <!--# Информация об устройстве #-->
+[#if VIEW_MODE="info_keenetic_devices"#]
+   [#inc keenetic_devices_dev_info.html#] 
+[#endif#]
+ 
+ <!-- table keenetic_routers edit -->
+ [#if VIEW_MODE="edit_keenetic_routers"#]
+   [#if ID!=""#]
+   [#if TITLE!=""#]<h4>[#TITLE#]</h4>[#endif TITLE#]
+<ul class="nav nav-tabs">
+  <li[#if TAB=""#] class="active"[#endif#]>
+   <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab="><#LANG_GENERAL#></a>
+  </li>
+<!--   <li[#if TAB="info"#] class="active"[#endif#]>
+   <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab=info">Информация</a>
+  </li> -->
+  <li[#if TAB="data"#] class="active"[#endif#]>
+   <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab=data">Устройства</a>
+  </li>
+</ul>
+&nbsp;<br/>
+   [#endif ID#]
+   [#if TAB=""#]
+    [#inc keenetic_routers_edit_default.html#]
+   [#endif TAB#]
+   [#if TAB="info"#]
+    [#inc keenetic_routers_edit_info.html#]
+   [#endif TAB#]
+   [#if TAB="data"#]
+    [#inc keenetic_routers_edit_data.html#]
+   [#endif TAB#]
+ [#endif VIEW_MODE#]
+ <!-- / table keenetic_routers edit -->
+ <!-- table keenetic_routers view --> 
+ [#if VIEW_MODE="view_keenetic_routers"#]
+   [#if TAB=""#]
+    [#inc keenetic_routers_view_default.html#]
+   [#endif TAB#]
+ [#endif VIEW_MODE#]
+ <!-- / table keenetic_routers view -->
+ [#endif DATA_SOURCE#]
+ <!-- action usual -->
+ [#if DATA_SOURCE="keenetic_devices"#]
+ <!-- table keenetic_devices search -->
+ [#if VIEW_MODE="search_keenetic_devices" || VIEW_MODE=""#]
+  [#inc keenetic_devices_search_admin.html#]
+ [#endif VIEW_MODE#]
+ <!-- / table keenetic_devices search -->
+ <!-- table keenetic_devices edit -->
+ [#if VIEW_MODE="edit_keenetic_devices"#]
+   [#inc keenetic_devices_edit.html#]
+ [#endif VIEW_MODE#]
+ <!-- / table keenetic_devices edit -->
+ <!-- table keenetic_devices view --> 
+ [#if VIEW_MODE="view_keenetic_devices"#]
+   [#inc keenetic_devices_view.html#]
+ [#endif VIEW_MODE#]
+ <!-- / table keenetic_devices view -->
+ [#endif DATA_SOURCE#]
