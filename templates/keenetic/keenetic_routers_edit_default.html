@@ -1,0 +1,80 @@
+
+<!-- Table 'keenetic_routers' edit -->
+<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
+[#if OK#]
+<div class="alert alert-success"><#LANG_DATA_SAVED#></div>
+[#endif OK#]
+[#if ERR#]
+<div class="alert alert-danger">[#ERR_ALERT#]</div>
+[#endif ERR#]
+<fieldset>
+[#if ID=""#]
+<legend><#LANG_NEW_RECORD#></legend>
+[#endif ID#]
+<!-- TITLE (varchar) -->
+<div class="col-lg-6 form-group[#if ERR_TITLE#] has-error[#endif#]">
+	 <label for="title" class="col-lg-6 control-label">
+	 <#LANG_TITLE#>:
+	 (*)
+	 </label>
+	 <div class="col-lg-6"><input class="form-control" id="title" name="title" value="[#TITLE#]" type="text" class="input"></div>
+	 <div class="clearfix hidden-xs hidden-sm"></div>  
+	 <label for="address" class="col-lg-6 control-label">
+	 Адрес роутера:
+	 (*)
+	 </label>
+	 <div class="col-lg-6"><input class="form-control" id="address" name="address" value="[#ADDRESS#]" type="text" class="input"></div>
+	 <div class="clearfix hidden-xs hidden-sm"></div>  
+	 <label for="login" class="col-lg-6 control-label">
+	 Имя пользователя:
+	 </label>
+	 <div class="col-lg-6"><input class="form-control" id="login" name="login" value="[#LOGIN#]" type="text" class="input"></div>
+	 <div class="clearfix hidden-xs hidden-sm"></div>  
+	 <label for="password" class="col-lg-6 control-label">
+	 Пароль:
+	 </label>
+	 <div class="col-lg-6"><input class="form-control" id="password" name="password" value="[#PASSWORD#]" type="password" class="input"></div>
+	 <div class="clearfix hidden-xs hidden-sm"></div>  
+	 [#if ID!=""#]
+	 <label for="reboot" class="col-lg-6 control-label">
+	 Перезагружать роутер при отсутствии интернета через:
+	 </label>
+	 <br>
+	 <div class="col-lg-6"><input class="form-control" id="reboot" name="reboot" value="[#AUTO_REBOOT#]" type="text" class="input">
+	  <div class="text-center">Cекунд. 0 - не перезагружать.</div>
+	 </div>
+	 [#endif ID#]
+	 
+</div>
+<div class="col-lg-6">
+[#if ID!=""#]
+  <b>Модель:</b> [#MODEL#]<br>
+  <b>Прошивка:</b> [#FIRMWARE#]<br>
+  <b>Серийный номер:</b> [#SERIAL#] <br>
+  <b>Статус:</b> [#if STATUS==1#]<span class="label label-success" title="Статус приложения">ONLINE</span>
+				[#else#]<span class="label label-danger" title="Статус приложения">OFFLINE</span>
+				[#endif STATUS#]<br>
+  <b>Интернет:</b> [#if INET_STATUS==1#]<span class="label label-success" title="Статус приложения">ONLINE</span>
+				[#else#]<span class="label label-danger" title="Статус приложения">OFFLINE</span>
+				[#endif INET_STATUS#]<br>
+[#endif ID#]
+</div>
+<div class="clearfix hidden-xs hidden-sm"></div>  
+<div class="form-group">
+	<div class="col-lg-offset-2 col-lg-4">
+	 [#if ID!=""#]
+	 <button type="submit" name="subm" value="Submit" class="btn btn-primary"><#LANG_SUBMIT#></button>
+	 [#else ID#]
+	 <button type="submit" name="subm" value="Add" class="btn btn-primary"><#LANG_ADD#></button>
+	 [#endif ID#]
+	 <a href="?data_source=<#DATA_SOURCE#>" class="btn btn-default "><#LANG_CANCEL#></a>
+	<input type="hidden" name="id" value="<#ID#>">
+	<input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+	<input type="hidden" name="edit_mode" value="<#EDIT_MODE#>">
+	<input type="hidden" name="mode" value="update">
+	<input type="hidden" name="data_source" value="<#DATA_SOURCE#>">
+	<input type="hidden" name="tab" value="<#TAB#>">
+	</div>
+</div>
+</fieldset>
+</form>

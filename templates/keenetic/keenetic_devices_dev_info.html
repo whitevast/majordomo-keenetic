@@ -1,0 +1,43 @@
+<!-- Информация об устройстве -->
+<div>
+<a href="?data_source=<#DATA_SOURCE#>&view_mode=edit_keenetic_routers&id=<#ROUTER_ID#>&tab=data"class="btn btn-default "><i class="glyphicon glyphicon-backward"></i> Назад</a>
+<br>
+<div class="text-left col-lg-2"><h1>[#TITLE#]</h1></div>
+<div class="clearfix hidden-xs hidden-sm"></div>
+</div>
+<div class="col-lg-6">
+	<label class="col-lg-4 control-label" for="inputTitle">Аптайм: </label>
+	<div class="col-lg-8">[#UPTIME#]</div>
+	<div class="clearfix hidden-xs hidden-sm"></div>
+[#if NAME!=""#]
+	<label class="col-lg-4 control-label" for="inputTitle">Название: </label>
+	<div class="col-lg-8">[#NAME#]</div>
+	<div class="clearfix hidden-xs hidden-sm"></div>
+	<label class="col-lg-4 control-label" for="inputTitle">Адрес: </label>
+	<div class="col-lg-8">[#ADDRESS#]</div>
+	<div class="clearfix hidden-xs hidden-sm"></div>
+[#else#]
+	<label class="col-lg-4 control-label" for="inputTitle">Принято, мб: </label>
+	<div class="col-lg-8">[#RXBYTES#]</div>
+	<div class="clearfix hidden-xs hidden-sm"></div>
+	<label class="col-lg-4 control-label" for="inputTitle">Отправлено, мб: </label>
+	<div class="col-lg-8">[#TXBYTES#]</div>
+	<div class="clearfix hidden-xs hidden-sm"></div>
+	[#if WIFI="1"#]
+	<div class="text-left"><b>Wi-Fi</b></div>
+	<label class="col-lg-4 control-label" for="inputTitle">Режим: </label>
+	<div class="col-lg-8">[#WIFI_MODE#]</div>
+	<div class="clearfix hidden-xs hidden-sm"></div>
+	<label class="col-lg-4 control-label" for="inputTitle">RSSI: </label>
+	<div class="col-lg-8">[#WIFI_RSSI#]</div>
+	<div class="clearfix hidden-xs hidden-sm"></div>
+	[#endif WIFI#]
+[#endif NAME#]
+</div>
+<div class="col-lg-6">
+	[#if LOG!=""#]
+    <label class="col-lg-1 control-label" for="inputTitle">Лог: </label>
+	<div class="clearfix hidden-xs hidden-sm"></div>
+    <div class="col-lg-12">[#LOG#]</div>
+	[#endif if LOG#]
+</div>
