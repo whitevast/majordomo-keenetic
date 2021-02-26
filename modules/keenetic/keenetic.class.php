@@ -204,29 +204,45 @@ function usual(&$out) {
 	$rec = SQLSelectOne('SELECT * FROM keenetic_devices WHERE ID="'.$id.'"');
 	$router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$rec['ROUTER_ID'].'"');
 	if($rec['MAC'] == "0.0.0.0.0.0"){
-		$isp = $this->getdata($router['ADDRESS'], $router['LOGIN'], $router['PASSWORD'], $router['COOKIES'], 'show/interface/ISP');
-
-		$isp = $this->getdata($router['ADDRESS'], $router['LOGIN'], $router['PASSWORD'], $router['COOKIES'], 'show/interface/'.$isp['usedby']['0']);
+		$interface = $this->getdata($router['ADDRESS'], $router['LOGIN'], $router['PASSWORD'], $router['COOKIES'], 'show/interface');
+		$isp = $interface[$interface['ISP']['usedby']['0']];
 		$uptime = $isp['uptime'];
 		$rec['NAME'] = $isp['description'];
 		$rec['ADDRESS'] = $isp['address'];
 	}
 	else{
-		$data = $this->getdata($router['ADDRESS'], $router['LOGIN'], $router['PASSWORD'], $router['COOKIES'], 'show/ip/hotspot', '{"mac": "'.$rec['MAC'].'"}');
-		$data = $data['host']['0'];
-		$uptime = $data['uptime'];
-		$rec['RXBYTES'] = round($data['rxbytes']/1024/1024, 1);
-		$rec['TXBYTES'] = round($data['txbytes']/1024/1024, 1);
-		if(isset($data['mws'])){
-			$rec['WIFI'] = 1;
-			$rec['WIFI_MODE'] = $data['mws']['mode'];
-			$rec['WIFI_RSSI'] = $data['mws']['rssi'];
-		} else if(isset($data['ap'])){
-			$rec['WIFI'] = 1;
-			$rec['WIFI_MODE'] = $data['mode'];
-			$rec['WIFI_RSSI'] = $data['rssi'];
+		$data = $this->getdata($router['ADDRESS'], $router['LOGIN'], $router['PASSWORD'], $router['COOKIES'], '', '{"show": {"mws": {"member": {}}, "ip": {"hotspot": {"mac": "'.$rec['MAC'].'"}}}}');
+		$host = $data['show']['ip']['hotspot']['host'][0];
+		$interfaces = $data['show']['mws']['member'];
+		foreach($interfaces as $value){;
+			$interface[$value['cid']] = $value['known-host'];
 		}
-		else $rec['WIFI'] = 0;
+		$uptime = $host['uptime'];
+		$rec['HOSTNAME'] = $host['hostname'];
+		$rec['RXBYTES'] = round($host['rxbytes']/1024/1024, 1);
+		$rec['TXBYTES'] = round($host['txbytes']/1024/1024, 1);
+		if(isset($host['mws'])){
+			$rec['ROUTER'] = $interface[$host['mws']['cid']];
+			$rec['WIFI_MODE'] = $host['mws']['mode'];
+			if(isset($host['mws']['_11'])){
+				foreach($host['mws']['_11'] as $mode){
+					$rec['WIFI_MODE'] = $rec['WIFI_MODE'].'/'.$mode;
+				}
+			}
+			$rec['WIFI_MODE'] = $rec['WIFI_MODE'].' '.($host['mws']['txss']==1?'1x1':'2x2').' '.$host['mws']['ht'].'МГц '.$host['mws']['txrate'].'Мбит';
+			$rec['RSSI'] = $host['mws']['rssi'];
+		} else if(isset($host['ap'])){
+			$rec['ROUTER'] = $router['MODEL'];
+			$rec['WIFI_MODE'] = $host['mode'];
+			if(isset($host['_11'])){
+				foreach($host['_11'] as $mode){
+					$rec['WIFI_MODE'] = $rec['WIFI_MODE'].'/'.$mode;
+				}
+			}
+			$rec['WIFI_MODE'] = $rec['WIFI_MODE'].' '.($host['txss']==1?'1x1':'2x2').' '.$host['ht'].'МГц '.$host['txrate'].'Мбит';
+			$rec['RSSI'] = $host['rssi'];
+		}
+	//print_r($rec);
 	}
 	$uptime = $this->seconds2times($uptime);
 	$times_values = array('',':',':','д.','лет');
@@ -309,7 +325,6 @@ function usual(&$out) {
 			}
 			if($getdata['show']['internet']['status']['internet'] != $val['INET_STATUS']){
 				if($getdata['show']['internet']['status']['internet']){
-					$message = "Соединение с интернетом на устройстве ". $val['TITLE'] . " восстановлено.";
 					$val['INET_STATUS'] = 1;
 					ClearTimeOut('KeeneticReboot');
 				} else {
@@ -317,7 +332,6 @@ function usual(&$out) {
 						print "TIMER START";
 						setTimeOut('KeeneticReboot','include_once(DIR_MODULES . "keenetic/keenetic.class.php");$keenetic_module = new keenetic();$keenetic_module->reboot('.$val['ID'].');',$val['AUTO_REBOOT']);
 					}
-					$message = "Соединение с интернетом на устройстве ". $val['TITLE'] . " потеряно.";
 					$val['INET_STATUS'] = 0;
 				}
 				$array = SQLSelectOne('SELECT * FROM keenetic_devices WHERE IP="0.0.0.0" AND ROUTER_ID="'.$val['ID'].'"');
@@ -330,9 +344,6 @@ function usual(&$out) {
 				SQLUpdate('keenetic_devices', $array); //обновляем статус в таблице устройств
 				$this->setProperty($array, $array['STATUS']);//обновляем свойство
 				$update = 1;
-				include_once(DIR_MODULES . 'telegram/telegram.class.php');
-				$telegram_module = new telegram();
-				$telegram_module->sendMessageToAll($message);
 			}
 
 			//Предобработка списка устройств
@@ -347,10 +358,17 @@ function usual(&$out) {
 				if(isset($devmac[$value['MAC']])){ //
 					$text = "";
 					if($value['STATUS'] != $devmac[$value['MAC']]['active']){
-						$value['STATUS'] = $devmac[$value['MAC']]['active']?1:0;
+						$value['STATUS'] = (int)$devmac[$value['MAC']]['active'];
 						$this->setProperty($value, $value['STATUS']);
 						if($value['STATUS']) $text = " в сети";
 						else $text = " не в сети";
+						if($value['STATUS'] == 1){ //проверяем и изменяем тип подключения
+							if(isset($devmac[$value['MAC']]['ap']) or isset($devmac[$value['MAC']]['mws'])){
+								if($value['TYPE_CONNECT'] == 0) $value['TYPE_CONNECT'] = 1;
+							} else {
+								if($value['TYPE_CONNECT'] == 1) $value['TYPE_CONNECT'] = 0;
+							}
+						}
 						$code = $value['SCRIPT'];
 						if($code and $code !=""){
 							$success = eval($code);
@@ -392,7 +410,7 @@ function usual(&$out) {
 				$new['TITLE'] = $value['name'];
 				$new['MAC'] = $value['mac'];
 				$new['IP'] = $value['ip'];
-				$new['STATUS'] = $value['active'];
+				$new['STATUS'] = (int)$value['active'];
 				if(isset($value['ap']) or isset($value['mws']))	$new['TYPE_CONNECT'] = 1;
 				else $new['TYPE_CONNECT'] = 0;
 				$new['ROUTER_ID'] = $val['ID'];
@@ -490,7 +508,7 @@ EOD;
 
 /////////////////////////My_functions//////////////////////////////////
 
- function getdata($ip, $login, $password, $cookies = "", $path = "", $data = ""){
+ function getdata($ip, $login, $password, $cookies = "", $path = "", $data = "", $save = false){
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, 'http://'.$ip."/rci/".$path);
 	curl_setopt($ch, CURLOPT_COOKIE, $cookies);
@@ -519,6 +537,10 @@ EOD;
 		$this->WriteLog("Ошибка отправки даных. http код: " . $http_code);
 		return -1;
 		}
+	}
+	if($save){
+		$resp = $this->getdata($ip, $login, $password, $cookies, 'system/configuration/save', '{}');
+		if($resp['message'] == "saving configuration...") $this->WriteLog("Конфигурация сохранена");
 	}
 	return json_decode($html, 1);
  }

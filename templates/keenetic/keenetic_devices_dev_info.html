@@ -2,10 +2,15 @@
 <div>
 <a href="?data_source=<#DATA_SOURCE#>&view_mode=edit_keenetic_routers&id=<#ROUTER_ID#>&tab=data"class="btn btn-default "><i class="glyphicon glyphicon-backward"></i> Назад</a>
 <br>
-<div class="text-left col-lg-2"><h1>[#TITLE#]</h1></div>
+<div class="text-left col-lg-4 text-primary""><h1>[#TITLE#]</h1></div>
 <div class="clearfix hidden-xs hidden-sm"></div>
 </div>
 <div class="col-lg-6">
+[#if HOSTNAME!=""#]
+<label class="col-lg-4 control-label" for="inputTitle">Имя хоста: </label>
+	<div class="col-lg-8">[#HOSTNAME#]</div>
+	<div class="clearfix hidden-xs hidden-sm"></div>
+[#endif HOSTNAME#]
 	<label class="col-lg-4 control-label" for="inputTitle">Аптайм: </label>
 	<div class="col-lg-8">[#UPTIME#]</div>
 	<div class="clearfix hidden-xs hidden-sm"></div>
@@ -23,15 +28,24 @@
 	<label class="col-lg-4 control-label" for="inputTitle">Отправлено, мб: </label>
 	<div class="col-lg-8">[#TXBYTES#]</div>
 	<div class="clearfix hidden-xs hidden-sm"></div>
-	[#if WIFI="1"#]
-	<div class="text-left"><b>Wi-Fi</b></div>
+	[#if ROUTER!=""#]
+	<div class="text-left"><h4>Wi-Fi</h4></div>
+	<label class="col-lg-4 control-label" for="inputTitle">Подключено через: </label>
+	<div class="col-lg-8">[#ROUTER#]</div>
+	<div class="clearfix hidden-xs hidden-sm"></div>
 	<label class="col-lg-4 control-label" for="inputTitle">Режим: </label>
 	<div class="col-lg-8">[#WIFI_MODE#]</div>
 	<div class="clearfix hidden-xs hidden-sm"></div>
-	<label class="col-lg-4 control-label" for="inputTitle">RSSI: </label>
-	<div class="col-lg-8">[#WIFI_RSSI#]</div>
+	<label class="col-lg-4 control-label" for="inputTitle">Уровень сигнала (rssi): </label>
+	<div class="col-lg-8">[#if RSSI>-70#]<span class="label label-success">
+							[#else#][#if RSSI>-80#]<span class="label label-warning">
+									[#else#][#if RSSI>-90#]<span class="label label-danger">
+											[#else#]<span class="label label-default">
+											[#endif#]
+									[#endif#]
+							[#endif RSSI_LEVEL#][#RSSI#]</span></div>
 	<div class="clearfix hidden-xs hidden-sm"></div>
-	[#endif WIFI#]
+	[#endif ROUTER#]
 [#endif NAME#]
 </div>
 <div class="col-lg-6">

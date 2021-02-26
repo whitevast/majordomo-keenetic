@@ -26,7 +26,7 @@
     if($ok){
 		 $rec['COOKIES'] = $this->auth($rec['ADDRESS'],$rec['LOGIN'],$rec['PASSWORD']);
 		 if($rec['COOKIES']){
-			$data = $this->getdata($rec['ADDRESS'],$rec['LOGIN'],$rec['PASSWORD'],$rec['COOKIES'],"show", '{"version": {}, "identification": {}, "internet":{"status":{}}}');
+			$data = $this->getdata($rec['ADDRESS'],$rec['LOGIN'],$rec['PASSWORD'],$rec['COOKIES'],"show",'{"version": {}, "identification": {}, "internet":{"status":{}}}');
 			if($data['version']['model'] == "Keenetic") $rec['MODEL'] = $data['version']['device'];
 			else $rec['MODEL'] = $data['version']['model'];
 			$rec['FIRMWARE'] = $data['version']['release'];
@@ -82,15 +82,26 @@
    for($i=0;$i<$total;$i++) {
     if ($properties[$i]['ID']==$new_id) continue;
     if ($this->mode=='update') {
+	  $old_title=$properties[$i]['TITLE'];
 	  $old_linked_object=$properties[$i]['LINKED_OBJECT'];
       $old_linked_property=$properties[$i]['LINKED_PROPERTY'];
+	  global ${'title'.$properties[$i]['ID']};
+	  if($properties[$i]['TITLE'] != 'Интернет') $properties[$i]['TITLE']=trim(${'title'.$properties[$i]['ID']});
       global ${'linked_object'.$properties[$i]['ID']};
       $properties[$i]['LINKED_OBJECT']=trim(${'linked_object'.$properties[$i]['ID']});
       global ${'linked_property'.$properties[$i]['ID']};
       $properties[$i]['LINKED_PROPERTY']=trim(${'linked_property'.$properties[$i]['ID']});
       global ${'linked_method'.$properties[$i]['ID']};
       $properties[$i]['LINKED_METHOD']=trim(${'linked_method'.$properties[$i]['ID']});
+	  // Если юзер удалил привязанные свойство и метод, но забыл про объект, то очищаем его.
+      if ($properties[$i]['LINKED_OBJECT'] != '' && ($properties[$i]['LINKED_PROPERTY'] == '' && $properties[$i]['LINKED_METHOD'] == '')) {
+          $properties[$i]['LINKED_OBJECT'] = '';
+      }
       SQLUpdate('keenetic_devices', $properties[$i]);
+	  if ($old_title != $properties[$i]['TITLE']){
+		  $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$rec['ID'].'"');
+		  $this->getdata($router['ADDRESS'], $router['LOGIN'], $router['PASSWORD'], $router['COOKIES'], 'known/host', '{"mac": "'.$properties[$i]['MAC'].'", "name": "'.$properties[$i]['TITLE'].'"}', 1);
+	  }
       if ($old_linked_object && $old_linked_object!=$properties[$i]['LINKED_OBJECT'] && $old_linked_property && $old_linked_property!=$properties[$i]['LINKED_PROPERTY']) {
        removeLinkedProperty($old_linked_object, $old_linked_property, $this->name);
       }

@@ -27,7 +27,11 @@
  </tr>
  [#begin PROPERTIES#]
  <tr>
-  <td valign="top">[#TITLE#]</td>
+  [#if TITLE=='Интернет'#]
+  <td valign="top">&nbsp;&nbsp;&nbsp;[#TITLE#]</td>
+  [#else TITLE#]
+  <td valign="top"><input type="text" class="form-control" name="title[#ID#]" id="title[#ID#]" value="[#TITLE#]"></td>
+  [#endif TITLE#]
   <td valign="top">[#MAC#]</td>
   <td valign="top">[#IP#]</td>
   <td>[#if STATUS==1#]<span class="label label-success" title="Статус устройства">ONLINE</span>
