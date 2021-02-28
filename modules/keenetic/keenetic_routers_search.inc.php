@@ -24,6 +24,9 @@
    //paging($res, 100, $out); // search result paging
    $total=count($res);
    for($i=0;$i<$total;$i++) {
+ 	   if($res[$i]['FIRMWARE'] != $res[$i]['NEW_FIRMWARE']){
+		   $res[$i]['UPDATE'] = 1;
+	   }
     // some action for every record if required
    }
    $out['RESULT']=$res;

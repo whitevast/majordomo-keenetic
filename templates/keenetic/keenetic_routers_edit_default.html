@@ -50,6 +50,9 @@
 [#if ID!=""#]
   <b>Модель:</b> [#MODEL#]<br>
   <b>Прошивка:</b> [#FIRMWARE#]<br>
+  [#if HREF!=""#]
+  <b><span class = "text-danger">Новая прошивка:</span></b> [#NEW_FIRMWARE#] <a href="[#HREF#]" target="_blank">Список изменений</a><br>
+  [#endif FIRMWARE#]
   <b>Серийный номер:</b> [#SERIAL#] <br>
   <b>Статус:</b> [#if STATUS==1#]<span class="label label-success" title="Статус приложения">ONLINE</span>
 				[#else#]<span class="label label-danger" title="Статус приложения">OFFLINE</span>

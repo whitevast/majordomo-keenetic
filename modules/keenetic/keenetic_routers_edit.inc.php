@@ -30,6 +30,7 @@
 			if($data['version']['model'] == "Keenetic") $rec['MODEL'] = $data['version']['device'];
 			else $rec['MODEL'] = $data['version']['model'];
 			$rec['FIRMWARE'] = $data['version']['release'];
+			$rec['NEW_FIRMWARE'] = $rec['FIRMWARE'];
 			$rec['SERIAL'] = $data['identification']['serial'];
 			if(!gr('reboot')) $rec['AUTO_REBOOT'] = 0;
 			$rec['STATUS'] = 1;
@@ -40,7 +41,6 @@
 			$ok=0;
 			$out['ERR_ALERT']="Введены неверные данные или устройство недоступно";
 		 }
-
 	}
   }
   //UPDATING RECORD
@@ -64,6 +64,10 @@
    } else {
     $out['ERR']=1;
    }
+  }
+  if ($rec['FIRMWARE'] != $rec['NEW_FIRMWARE']){
+	  $link = $this->getdata($rec['ADDRESS'],$rec['LOGIN'],$rec['PASSWORD'],$rec['COOKIES'],"webhelp/release-notes",'{"version": "'.$rec['NEW_FIRMWARE'].'", "locale": "ru"}');
+	  $rec['HREF'] = $link['webhelp']['ru'][0]['href'];
   }
   // step: data
   if ($this->tab=='data') {
@@ -120,3 +124,4 @@
    }
   }
   outHash($rec, $out);
+//  print_r($out);

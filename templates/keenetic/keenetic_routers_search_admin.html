@@ -38,7 +38,7 @@
  <td>[#TITLE#]</td>
  <td>[#ADDRESS#]</td>
  <td>[#MODEL#]</td>
- <td>[#FIRMWARE#]</td>
+ <td>[#if UPDATE!=""#]<span class="label label-danger" title="Есть обновление">[#FIRMWARE#]</span>[#else#][#FIRMWARE#][#endif#]</td>
  <td>[#if STATUS==1#]<span class="label label-success" title="Статус приложения">ONLINE</span>
 	[#else#]<span class="label label-danger" title="Статус приложения">OFFLINE</span>
 	[#endif STATUS#]</td>

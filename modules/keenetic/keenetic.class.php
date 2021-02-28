@@ -301,9 +301,25 @@ function usual(&$out) {
     }
    }
  }
+ function processSubscription($event, $details=''){
+	 $this->getConfig();
+	 if($event == 'HOURLY'){
+		 $routers = SQLSelect("SELECT * FROM keenetic_routers");
+		  $this->WriteLog($event);
+		 foreach($routers as $val){
+			 $this->WriteLog('Входим в цикл');
+			 $fimware = $this->getdata($val['ADDRESS'], $val['LOGIN'], $val['PASSWORD'], $val['COOKIES'], 'components/list', "{}");
+			  $this->WriteLog($fimware['firmware']['version']);
+			 if($fimware['firmware']['version'] != $val['NEW_FIRMWARE']){
+				$val['NEW_FIRMWARE'] = $fimware['firmware']['version'];
+				$this->WriteLog($val['NEW_FIRMWARE']);
+				SQLUpdate('keenetic_routers', $val);
+			 }
+		 }
+	 } 
+ }
  function processCycle() {
  //$this->getConfig();
-
 	$routers = SQLSelect("SELECT * FROM keenetic_routers");
  	foreach($routers as $val){
 		$update = 0;
@@ -444,6 +460,7 @@ function setProperty($line, $value){
 * @access private
 */
  function install($data='') {
+  subscribeToEvent($this->name, 'HOURLY');
   parent::install();
  }
 /**
@@ -454,6 +471,7 @@ function setProperty($line, $value){
 * @access public
 */
  function uninstall() {
+  unsubscribeFromEvent($this->name, 'HOURLY');
   $id = SQLSelect('SELECT ID FROM keenetic_routers');
   for($i=0; $i<count($id); $i++){
 	$this->delete_keenetic_routers($id[$i]['ID']);
@@ -483,6 +501,7 @@ keenetic_devices -
  keenetic_routers: PASSWORD varchar(100) NOT NULL DEFAULT ''
  keenetic_routers: COOKIES varchar(100) NULL DEFAULT ''
  keenetic_routers: FIRMWARE varchar(20) NOT NULL DEFAULT ''
+ keenetic_routers: NEW_FIRMWARE varchar(20) NOT NULL DEFAULT ''
  keenetic_routers: SERIAL varchar(20) NOT NULL DEFAULT ''
  keenetic_routers: STATUS boolean NOT NULL DEFAULT 0
  keenetic_routers: INET_STATUS boolean NOT NULL DEFAULT 0
@@ -513,7 +532,7 @@ EOD;
 	curl_setopt($ch, CURLOPT_URL, 'http://'.$ip."/rci/".$path);
 	curl_setopt($ch, CURLOPT_COOKIE, $cookies);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
+	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
 	curl_setopt($ch, CURLOPT_TIMEOUT, 5);
 	if($data != ""){
 		curl_setopt($ch, CURLOPT_POST, 1);
