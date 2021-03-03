@@ -7,6 +7,14 @@
   }
   $table_name='keenetic_routers';
   $rec=SQLSelectOne("SELECT * FROM $table_name WHERE ID='$id'");
+  if ($rec['FIRMWARE'] != $rec['NEW_FIRMWARE']){
+	  $link = $this->getdata($rec,"webhelp/release-notes",'{"version": "'.$rec['NEW_FIRMWARE'].'", "locale": "ru"}');
+	  while(!isset($link['webhelp']['ru'][0]['href'])){
+		  usleep(300);
+		   $link = $this->getdata($rec, "webhelp/release-notes");
+	  }
+	  $rec['HREF'] = $link['webhelp']['ru'][0]['href'];
+  }
   if ($this->mode=='update') {
    $ok=1;
   // step: default
@@ -26,7 +34,7 @@
     if($ok){
 		 $rec['COOKIES'] = $this->auth($rec['ADDRESS'],$rec['LOGIN'],$rec['PASSWORD']);
 		 if($rec['COOKIES']){
-			$data = $this->getdata($rec['ADDRESS'],$rec['LOGIN'],$rec['PASSWORD'],$rec['COOKIES'],"show",'{"version": {}, "identification": {}, "internet":{"status":{}}}');
+			$data = $this->getdata($rec,"show",'{"version": {}, "identification": {}, "internet":{"status":{}}}');
 			if($data['version']['model'] == "Keenetic") $rec['MODEL'] = $data['version']['device'];
 			else $rec['MODEL'] = $data['version']['model'];
 			$rec['FIRMWARE'] = $data['version']['release'];
@@ -55,6 +63,7 @@
 	 $inet['IP'] = "0.0.0.0";
 	 $inet['STATUS'] = $data['internet']['status']['internet'];
 	 $inet['TYPE_CONNECT'] = 0;
+	 $inet['REGISTERED'] = 1;
 	 $inet['ROUTER_ID'] = $rec['ID'];
 	 $inet['UPDATED'] = date('Y-m-d H:i:s');
 	 SQLInsert('keenetic_devices', $inet);
@@ -65,14 +74,15 @@
     $out['ERR']=1;
    }
   }
-  if ($rec['FIRMWARE'] != $rec['NEW_FIRMWARE']){
-	  $link = $this->getdata($rec['ADDRESS'],$rec['LOGIN'],$rec['PASSWORD'],$rec['COOKIES'],"webhelp/release-notes",'{"version": "'.$rec['NEW_FIRMWARE'].'", "locale": "ru"}');
-	  $rec['HREF'] = $link['webhelp']['ru'][0]['href'];
-  }
   // step: data
   if ($this->tab=='data') {
    //dataset2
    $new_id=0;
+   global $register_id;
+   if ($register_id) {
+    $device = SQLSelectOne('SELECT * FROM keenetic_devices WHERE ID="'.$register_id.'"');
+	$this->getdata($rec, 'known/host', '{"mac": "'.$device['MAC'].'", "name": "'.$device['TITLE'].'"}', 1);
+   }
    global $delete_id;
    if ($delete_id) {
     SQLExec("DELETE FROM keenetic_devices WHERE ID='".(int)$delete_id."'");
@@ -103,8 +113,7 @@
       }
       SQLUpdate('keenetic_devices', $properties[$i]);
 	  if ($old_title != $properties[$i]['TITLE']){
-		  $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$rec['ID'].'"');
-		  $this->getdata($router['ADDRESS'], $router['LOGIN'], $router['PASSWORD'], $router['COOKIES'], 'known/host', '{"mac": "'.$properties[$i]['MAC'].'", "name": "'.$properties[$i]['TITLE'].'"}', 1);
+		  $this->getdata($rec, 'known/host', '{"mac": "'.$properties[$i]['MAC'].'", "name": "'.$properties[$i]['TITLE'].'"}', 1);
 	  }
       if ($old_linked_object && $old_linked_object!=$properties[$i]['LINKED_OBJECT'] && $old_linked_property && $old_linked_property!=$properties[$i]['LINKED_PROPERTY']) {
        removeLinkedProperty($old_linked_object, $old_linked_property, $this->name);
