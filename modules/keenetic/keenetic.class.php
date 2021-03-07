@@ -373,6 +373,9 @@ function usual(&$out) {
 			$devices = $getdata['show']['ip']['hotspot']['host'];
 			foreach ($devices as $valuedev){
 				if($valuedev['name'] == "") $valuedev['name'] = $valuedev['hostname'];
+				if(!isset($valuedev['link'])) $valuedev['link'] = 0;
+				else if($valuedev['link'] == "up") $valuedev['link'] = 1;
+				else $valuedev['link'] = 0;
 				$devmac[$valuedev['mac']] = $valuedev;
             }
 			//Проверка изменений
@@ -380,8 +383,8 @@ function usual(&$out) {
 			foreach ($devicesindb as $value){ //Если устройство из БД есть в устройствах, отданных роутером
 				if(isset($devmac[$value['MAC']])){ //
 					$text = "";
-					if($value['STATUS'] != $devmac[$value['MAC']]['active']){
-						$value['STATUS'] = (int)$devmac[$value['MAC']]['active'];
+					if($value['STATUS'] != $devmac[$value['MAC']]['link']){
+						$value['STATUS'] = (int)$devmac[$value['MAC']]['link'];
 						$this->setProperty($value, $value['STATUS']);
 						if($value['STATUS']) $text = " в сети";
 						else $text = " не в сети";
