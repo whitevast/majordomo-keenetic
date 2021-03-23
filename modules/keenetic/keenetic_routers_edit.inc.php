@@ -67,6 +67,11 @@
 	 $inet['ROUTER_ID'] = $rec['ID'];
 	 $inet['UPDATED'] = date('Y-m-d H:i:s');
 	 SQLInsert('keenetic_devices', $inet);
+	 $script['TITLE'] = $rec['MODEL'].'_'.$rec['ID'];
+	 $script['TYPE'] = 0;
+	 $script['DESCRIPTION'] = 'Скрипт роутера '.$rec['MODEL'].' с адресом'.$rec['ADDRESS'];
+	 $script['CATEGORY_ID'] = 0;
+	 SQLInsert('scripts', $script);
     }
     $out['OK']=1;
 	setGlobal('cycle_keeneticControl','restart');
