@@ -19,9 +19,13 @@ echo date("H:i:s") . " running " . basename(__FILE__) . PHP_EOL;
 $latest_check=0;
 if($keenetic_module->config['CYCLE_TIME'] != "") $checkEvery = $keenetic_module->config['CYCLE_TIME'];
 else $checkEvery = 5;
+$timeUpdate = 0;
 while (1)
 {
-   setGlobal((str_replace('.php', '', basename(__FILE__))) . 'Run', time(), 1);
+   if(time() - $timeUpdate > 20){
+     setGlobal((str_replace('.php', '', basename(__FILE__))) . 'Run', time(), 1);
+	 $timeUpdate = time();
+   }
    if ((time()-$latest_check)>=$checkEvery) {
     $latest_check=time();
     echo date('Y-m-d H:i:s').' Polling devices...';

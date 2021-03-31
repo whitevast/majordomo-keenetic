@@ -49,6 +49,10 @@
  [#endif VIEW_MODE#]
  <!-- / table keenetic_routers search -->
  
+  <!--# Справка по модулю. #-->
+[#if VIEW_MODE="show_help"#]
+   [#inc ./help_ru.html#] 
+[#endif#]
   <!--# Информация об устройстве #-->
 [#if VIEW_MODE="info_keenetic_devices"#]
    [#inc keenetic_devices_dev_info.html#] 

@@ -1,4 +1,22 @@
 <!-- Информация об устройстве -->
+		[#if ERR_CODE#]
+		  <div class="alert alert-danger"><#LANG_FILLOUT_REQURED#></div> 
+		  <script>
+			$(window).load(function() {
+				[#if SETTINGS_CODEEDITOR_SHOWERROR == '1' AND SETTINGS_CODEEDITOR_TURNONSETTINGS == '1'#]
+					find = $('div pre.CodeMirror-line:eq([#ERR_LINE#])');
+					find.attr('id', 'errorline_[#ERR_LINE#]');
+				
+					var newElems = $("<div class='hintError' style='border-top: 1px solid red;font-weight: bold;font-style: italic;'><#LANG_STRING_ERROR#> -> [#ERRORS#]</div>");
+					$('div pre.CodeMirror-line:eq([#ERR_LINE#])').append(newElems);
+				[#endif#]
+				
+				[#if SETTINGS_CODEEDITOR_UPTOLINE == '1' AND SETTINGS_CODEEDITOR_TURNONSETTINGS == '1'#]
+					location.href='#errorline_[#ERR_LINE#]';
+				[#endif#]				
+			});
+			</script>
+		[#endif ERR#]
 <div>
 <a href="?data_source=<#DATA_SOURCE#>&view_mode=edit_keenetic_routers&id=<#ROUTER_ID#>&tab=data"class="btn btn-default "><i class="glyphicon glyphicon-backward"></i> Назад</a>
 <br>
@@ -7,7 +25,7 @@
 </div>
 <div class="col-lg-6">
 [#if HOSTNAME!=""#]
-<label class="col-lg-4 control-label" for="inputTitle">Имя хоста: </label>
+	<label class="col-lg-4 control-label" for="inputTitle">Имя хоста: </label>
 	<div class="col-lg-8">[#HOSTNAME#]</div>
 	<div class="clearfix hidden-xs hidden-sm"></div>
 [#endif HOSTNAME#]
@@ -47,7 +65,46 @@
 	<div class="clearfix hidden-xs hidden-sm"></div>
 	[#endif ROUTER#]
 [#endif NAME#]
+	<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
+		<fieldset>
+			<br><br>
+			<div class="form-group" style="margin-right: 0px;margin-left: 0px;">
+				<label class="col-lg-0 col-md-1" style="max-width: 240px;float: left;padding: 5px 10px 0px 0px;text-align: right;"><#LANG_CODE#><#LANG_HCB#>code<#LANG_HCE#></label>
+				<div class="col-lg-10 col-md-8">
+					[#module name="blockly_code" system_name="keenetic<#ID#>" code_field="code" action=""#]
+					[#if ERRORS#]
+						<div id="error_noty" style="margin-top: 10px;color: #ff574b;border: 1px solid;border-radius: 5px;padding: 5px;background: #ffffff;width: 100%;">
+							<b><#LANG_CODEEDITOR_ERROR_IN_CODE#> -></b> [#ERRORS#] в строке [#ERR_LINE#]
+							<div><#LANG_CODEEDITOR_ERROR_RESTORE_CODE#></div>
+						</div>
+						<textarea id="error_old_code" style="display:none;">[#ERR_OLD_CODE#]</textarea>
+					[#endif ERRORS#]
+					<div class="visible-xs visible-sm" id="mobileIndicator"></div>
+					<div id="code_area" style="margin-top: 10px;">
+						<div id="autosave_code_in_time_div" style="color: gray;font-style: italic;font-size: 1rem;display:none;margin-left: 5px;margin-bottom: 4px;">
+							<i class="glyphicon glyphicon-floppy-saved" style="vertical-align: top;"></i> <#LANG_CODEEDITOR_AUTOSAVE_CODE#> <span id="autosave_code_in_time"></span>. <#LANG_CODEEDITOR_AUTOSAVE_CODE_HELP#>
+						</div>
+						<textarea name="code" id="code" rows=30 cols=100 class="form-control">[#SCRIPT#]</textarea>
+					</div>
+				</div>
+			</div>
+			<div class="form-group" style="margin-right: 0px;margin-left: 0px;">
+				<div class="col-lg-offset-2 col-lg-10">
+					<button class="btn btn-success" type="submit" name="subm" value="<#LANG_SUBMIT#>"><i class="glyphicon glyphicon-ok" aria-hidden="true"></i> <#LANG_SUBMIT#></button>
+					<a href="javascript://" onclick="ajaxAutosave('checkcode');" id="checkCodeBtn" class="btn btn-info"><i class="glyphicon glyphicon-share" aria-hidden="true"></i> <#LANG_CODEEDITOR_CHECK_ON_ERROR_BTN#></a>
+					<!-- <a href="?data_source=<#DATA_SOURCE#>" class="btn btn-default"><i class="glyphicon glyphicon-remove" aria-hidden="true"></i> <#LANG_CANCEL#></a> -->
+					<input type="hidden" name="id" value="<#ID#>">
+					<input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+					<input type="hidden" name="edit_mode" value="<#EDIT_MODE#>">
+					<input type="hidden" name="mode" value="update">
+					<input type="hidden" name="data_source" value="<#DATA_SOURCE#>">
+					<input type="hidden" name="tab" value="<#TAB#>">
+				</div>
+			</div>
+		</fieldset>
+	</form>
 </div>
+
 <div class="col-lg-6">
 	[#if LOG!=""#]
     <label class="col-lg-1 control-label" for="inputTitle">Лог: </label>

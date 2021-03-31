@@ -54,6 +54,7 @@
   //UPDATING RECORD
    if ($ok) {
     if ($rec['ID']) {
+	 if(isset($rec['HREF'])) unset($rec['HREF']);
      SQLUpdate($table_name, $rec); // update
     } else {
      $new_rec=1;
@@ -67,11 +68,11 @@
 	 $inet['ROUTER_ID'] = $rec['ID'];
 	 $inet['UPDATED'] = date('Y-m-d H:i:s');
 	 SQLInsert('keenetic_devices', $inet);
-	 $script['TITLE'] = $rec['MODEL'].'_'.$rec['ID'];
+/* 	 $script['TITLE'] = $rec['MODEL'].'_'.$rec['ID'];
 	 $script['TYPE'] = 0;
 	 $script['DESCRIPTION'] = 'Скрипт роутера '.$rec['MODEL'].' с адресом'.$rec['ADDRESS'];
 	 $script['CATEGORY_ID'] = 0;
-	 SQLInsert('scripts', $script);
+	 SQLInsert('scripts', $script); */
     }
     $out['OK']=1;
 	setGlobal('cycle_keeneticControl','restart');
@@ -120,7 +121,7 @@
 	  if ($old_title != $properties[$i]['TITLE']){
 		  $this->getdata($rec, 'known/host', '{"mac": "'.$properties[$i]['MAC'].'", "name": "'.$properties[$i]['TITLE'].'"}', 1);
 	  }
-      if ($old_linked_object && $old_linked_object!=$properties[$i]['LINKED_OBJECT'] && $old_linked_property && $old_linked_property!=$properties[$i]['LINKED_PROPERTY']) {
+      if ($old_linked_object && $old_linked_object!=$properties[$i]['LINKED_OBJECT'] || $old_linked_property && $old_linked_property!=$properties[$i]['LINKED_PROPERTY']) {
        removeLinkedProperty($old_linked_object, $old_linked_property, $this->name);
       }
       if ($properties[$i]['LINKED_OBJECT'] && $properties[$i]['LINKED_PROPERTY']) {
@@ -138,4 +139,4 @@
    }
   }
   outHash($rec, $out);
-//  print_r($out);
+  //print_r($out);

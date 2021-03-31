@@ -1,0 +1,123 @@
+<h4>Справка</h4> <a href="https://mjdm.ru/forum/viewtopic.php?f=5&t=7382" target="_blank">Тема на форуме</a>
+<div class="panel-group" id="accordion" style="width:98%">
+   <div class="panel panel-info">
+      <div class="panel-heading">
+         <a data-toggle="collapse" data-parent="#accordion" href="#general_help">Общие сведения</a>
+      </div>
+      <div class="panel-body collapse" id="general_help">
+         <div style="width:98%">
+            <p>Модуль предназначен для взаимодействия с интернет-центрами <strong>Keenetic</strong> с версией прошивки не ниже <strong>2.13</strong>.</p>
+            <p><strong>Возможности модуля:</strong></p>
+            <ul>
+            <li>добавление роутера по IP адресу или KeenDNS;</li>
+            <li>поддержка нескольких роутеров;</li>
+            <li>определение доступности роутера;</li>
+			<li>оповещение о новом ПО для роутера;</li>
+            <li>получение списка подключенных к роутеру устройств;</li>
+            <li>определение доступности подключенных к роутеру устройств</li>
+			<li>просмотр информации о подключенном устройстве</li>
+			<li>выполнение произвольного кода при изменении статуса подключенного устройства</li>
+            </ul>
+			<p>Для взаимодействия с роутером используется REST API (/rci). Попробовать можно по адресу http://IP_роутера/a.</p>
+           	<p>В модуле имеется цикл, который раз в указанное пользователем количество секунд опрашивает роутер, чтобы получить информацию о подключенных устройствах, сетях и пр.</p>
+            <p>Для добавления интернет-центра нажмите кнопку +Добавить, придумайте название роутера, введите IP адрес или KeenDNS имя, имя пользователя и пароль. После нажатия кнопки Добавить модуль подключится к роутеру и он появится в списке доступных устройств.
+			Здесь же сразу можно установить количество секунд, через которое модуль будет отправлять роутеру команду перезагрузки после исчезновения доступа в интернет. 0 - не перезагружать</p>
+			<p>В настройках (значок шестеренки) можно установить период опроса роутера (по умолчанию 5 секунд) и включить отладку DebMes</p>
+         </div>
+      </div>
+   </div>
+   <div class="panel panel-info">
+      <div class="panel-heading">
+         <a data-toggle="collapse" data-parent="#accordion" href="#script_help">Скрипт, выполняемый при изменении статуса устройства</a>
+      </div>
+      <div class="panel-body collapse" id="script_help">
+        <div style="width:900px">
+		  <p>В поле скрипта уже заложено тело скрипта, а именно условия для определения статуса устройства. Туда вы можете вносить любые действия.</p>
+		  <strong>Пример:</strong><br>
+			<i>if($status){ //если устройство появилось в сети <br>
+			&nbsp;$text = "в сети";<br>
+			}<br>
+			else{ //если устройство отключилось от сети<br>
+			&nbsp;$text = "не в сети";<br>
+			}<br>
+			say("Телефон ребенка " . $text, 1);</i><br><br>
+			<p>В скрипте можно использовать массив <strong>$device</strong>, полученный от роутера.</p>
+			 <strong>Пример:</strong><br>
+			<i>if($status){ //если устройство появилось в сети <br>
+			&nbsp;$ip = $device['ip'];<br>
+			&nbsp;say('Устройство с адресом $ip в сети',1);<br>
+			}<br>
+			else{ //если устройство отключилось от сети<br>
+			}<br>
+			</i><br>
+			Как правило, когда устройство не в сети, большая часть параметров либо равна <strong>нулю</strong>, либо вообще <strong>отсутствует</strong>. Например, IP адрес обычно становится 0.0.0.0.
+		</div>
+      </div>
+   </div>
+   <div class="panel panel-info">
+      <div class="panel-heading">
+         <a data-toggle="collapse" data-parent="#accordion" href="#device_help">Описание массива $device</a>
+      </div>
+      <div class="panel-body collapse" id="device_help">
+         <div style="width:900px">
+            <strong>['mac'] => 68:72:c3:56:42:81</strong> - MAC адрес<br>
+			<strong>['via'] => 68:72:c3:56:42:81</strong> - MAC адрес<br>
+			<strong>['ip'] => 192.168.1.126</strong> - IP адрес<br>
+			<strong>['hostname'] =></strong> - название устройства, переданное самим устройством<br>
+			<strong>['name'] => TV55</strong> - название устройства на роутере<br>
+			<strong>['interface'] =></strong> - подмассив с информацией об интерфейсе<br>
+			&nbsp;<strong>(</strong><br>
+			&nbsp;&nbsp;<strong>['id'] => Bridge0</strong> - бридж, к которому подключено устройство<br>
+			&nbsp;&nbsp;<strong>['name'] => Home</strong> - название интерфейса<br>
+			&nbsp;&nbsp;<strong>['description'] => HomeSet</strong> - название сети<br>
+			&nbsp;<strong>)</strong><br>
+			<strong>['dhcp'] =></strong> - подмассив с информацией о DHCP<br>
+			&nbsp;<strong>(</strong><br>
+			&nbsp;&nbsp;<strong>['static'] => 1</strong> - статический или случайный адрес<br>
+			&nbsp;<strong>)</strong><br>
+			<strong>['registered'] => 1</strong> - зарегистрировано ли устройство на роутере<br>
+			<strong>['access'] => permit</strong> - разрешено ли подключаться к роутеру<br>
+			<strong>['schedule'] =></strong> - расписание для устройства<br>
+			<strong>['service-class'] => 3</strong> - класс обслуживания<br>
+			<strong>['active'] => 1</strong> - активно ли устройство<br>
+			<strong>['rxbytes'] => 4788</strong> - принято байт<br>
+            <strong>['txbytes'] => 0</strong> - отправлено байт<br>
+            <strong>['first-seen'] => 420384</strong> - время после первого появления<br>
+            <strong>['last-seen'] => 0</strong> - время после последнего появления<br>
+            <strong>['link'] => up</strong> - активность порта<br>
+            <strong>['ssid'] => HomeNet</strong> - SSID сети<br>
+            <strong>['ap'] => WifiMaster0/AccessPoint0</strong> - к какой точке доступа подключен<br>
+            <strong>['authenticated'] => 1</strong><br>
+            <strong>['txrate'] => 65</strong> - скорость подключения<br>
+            <strong>['uptime'] => 404202</strong> - аптайм<br>
+            <strong>['ht'] => 20</strong> - частота<br>
+            <strong>['mode'] => 11n</strong> - режим подключения<br>
+            <strong>['gi'] => 800</strong><br>
+            <strong>['rssi'] => -45</strong> - уровень сигнала<br>
+            <strong>['mcs'] => 7</strong><br>
+            <strong>['txss'] => 1</strong> - MIMO 1х1 или 2х2<br>
+            <strong>['ebf'] =></strong><br>
+            <strong>['security'] => wpa2-psk</strong> - тип безопасности<br>
+			<strong>['traffic-shape'] =></strong> - подмассив с информацией об ограничении трафика<br>
+			&nbsp;<strong>(</strong><br>
+			&nbsp;&nbsp;<strong>['rx'] => 0</strong> - принято<br>
+			&nbsp;&nbsp;<strong>['tx'] => 0</strong> - отправлено<br>
+			&nbsp;&nbsp;<strong>['mode'] => mac</strong> - режим<br>
+			&nbsp;&nbsp;<strong>['schedule'] =></strong> - расписание<br>
+			&nbsp;<strong>)</strong><br>
+			<strong>['dns-filter'] =></strong> подмассив с информацией о dns-фильтре<br>
+			&nbsp;<strong>(</strong><br>
+			&nbsp;&nbsp;<strong>['engine'] => skydns</strong> - оспользуемый фильтр<br>
+			&nbsp;&nbsp;<strong>['profile'] => 18498802</strong> - профиль<br>
+			&nbsp;<strong>)</strong><br>
+			<br>
+			<p>Какое-то параметры могут отсутствовать или присутствовать при подключении через LAN. Также, при подключении через другие устройства, объединенные в Wi-Fi систему, параметры подключения Wi-Fi будут передаваться в подмассиве <strong>[mws]</strong>.</p>
+			<p>Аналогичный массив передается привязанному скрипту через <strong>$params</strong>.</p>
+         </div>
+      </div>
+   </div>
+</div>
+<br>
+<div>
+   <a href="?data_source=<#DATA_SOURCE#>" class="btn btn-default"><#LANG_STRING_BACK#></a>
+</div>
