@@ -494,10 +494,10 @@ function usual(&$out) {
 				if(isset($value['ap']) or isset($value['mws']))	$new['TYPE_CONNECT'] = 1;
 				else $new['TYPE_CONNECT'] = 0;
 				$new['ROUTER_ID'] = $val['ID'];
-				$new['SCRIPT'] ='if($status){ //если устройство появилось в сети
+				$new['SCRIPT'] ='if($status){ //если устройство появилось в сети;
 	
 }
-else{ //если устройство отключилось от сети
+else{ //если устройство отключилось от сети;
 	
 }';
 				$new['UPDATED'] = date('Y-m-d H:i:s');
