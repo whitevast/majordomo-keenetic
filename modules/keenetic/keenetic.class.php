@@ -360,8 +360,9 @@ function usual(&$out) {
  //$this->getConfig();
 	$routers = SQLSelect("SELECT * FROM keenetic_routers");
  	foreach($routers as $val){
+	//	print_r($val);
 		$update = 0;
-		$getdata = $this->getdata($val, '', '{"show": {"version": {}, "identification": {}, "ip":{"hotspot":{}}, "internet":{"status":{}}}}');																		
+		$getdata = $this->getdata($val, '', '{"show": {"version": {}, "identification": {}, "ip":{"hotspot":{}}, "internet":{"status":{}}}}');
 		if(!$getdata){
 			if($val['STATUS'] == 1){
 				$val['STATUS'] = 0;
@@ -405,10 +406,6 @@ function usual(&$out) {
 				$this->setProperty($array, $array['STATUS']);//обновляем свойство
 				$update = 1;
 			}
-			if($update){
-				$val['UPDATED'] = date('Y-m-d H:i:s');
-				SQLUpdate('keenetic_routers', $val);
-			}
 
 			//Предобработка списка устройств
 			$devices = $getdata['show']['ip']['hotspot']['host'];
@@ -439,7 +436,6 @@ function usual(&$out) {
 								if($value['TYPE_CONNECT'] == 1) $value['TYPE_CONNECT'] = 0;
 							}
 						}
-						print_r($device);
 						$code = $value['SCRIPT'];
 						$errors = php_syntax_error($code);
 						if ($errors){
@@ -479,7 +475,7 @@ function usual(&$out) {
 					unset($devmac[$value['MAC']]);
 				} else { //Если устройства из БД нет в устройствах, отданных роутером, удаляем устройство из БД
 					if($value['TITLE'] == "Интернет") continue;
-					if($value['LINKED_OBJECT'] and $value['LINKED_PROPERTY']) continue; //если есть привязанные свойства, не удаляем
+					if($value['LINKED_OBJECT']) continue; //если есть привязанный объект, не удаляем
 					SQLExec("DELETE FROM keenetic_devices WHERE ID='".$value['ID']."'");
 					$this->WriteLog("Устройство ".$value['TITLE'].", MAC: ".$value['MAC']." удалено c ".$val['TITLE'].".");
 				}
@@ -506,13 +502,16 @@ else{ //если устройство отключилось от сети;
 			}
 			unset($devmac);
 		}
+			if($update){
+			SQLUpdate('keenetic_routers', $val);
+		}
 	}
  }
  
  //Запись в привязанное свойство
 function setProperty($device, $value, $params = ''){
         if ($device['LINKED_OBJECT'] && $device['LINKED_PROPERTY']) {
-			setGlobal($device['LINKED_OBJECT'] . '.' . $device['LINKED_PROPERTY'], $value);
+			setGlobal($device['LINKED_OBJECT'] . '.' . $device['LINKED_PROPERTY'], $value, 0, 'keenetic_module');
         }
 		if ($device['LINKED_OBJECT'] && $device['LINKED_METHOD']) {
 			$params['VALUE'] = $value;
@@ -600,12 +599,14 @@ EOD;
 	$login = $router['LOGIN'];
 	$password = $router['PASSWORD'];
 	$cookies = $router['COOKIES'];
+	$prefix = "http://";
+	if(!$this->isIP($ip))$prefix = "https://";
 	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, 'http://'.$ip."/rci/".$path);
+	curl_setopt($ch, CURLOPT_URL, $prefix.$ip."/rci/".$path);
 	curl_setopt($ch, CURLOPT_COOKIE, $cookies);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
-	curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 	if($data != ""){
 		curl_setopt($ch, CURLOPT_POST, 1);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
@@ -622,13 +623,14 @@ EOD;
 			$array['COOKIES'] = $cookies;
 			$array['UPDATED'] = date('Y-m-d H:i:s');
 			$array['ID'] = SQLUpdate('keenetic_routers', $array); //обновляем куки в базе
-			$html = $this->getdata($router, $path, $data); //повторяем запрос
+			$html = $this->getdata($array, $path, $data); //повторяем запрос
 			return $html;
 		} else {
 		$this->WriteLog("Ошибка отправки даных. http код: " . $http_code);
 		return -1;
 		}
 	}
+	if($http_code != 200) return false;
 	if($save){
 		$resp = $this->getdata($router, 'system/configuration/save', '{}');
 		if($resp['message'] == "saving configuration...") $this->WriteLog("Конфигурация сохранена");
@@ -637,7 +639,9 @@ EOD;
  }
  
  function auth($ip, $login, $password){
-	$ch = curl_init('http://'.$ip.'/auth');
+	$prefix = "http://";
+	if(!$this->isIP($ip))$prefix = "https://";
+	$ch = curl_init($prefix.$ip.'/auth');
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_HEADER, true);
 	curl_setopt($ch, CURLOPT_COOKIE, $cookies);
@@ -652,7 +656,15 @@ EOD;
 		$middle=explode(":",$part);
 		@$headers[trim($middle['0'])] = trim($middle['1']);
 	}
-	$pass = hash('sha256', $headers["X-NDM-Challenge"].md5($login.':'.$headers["X-NDM-Realm"].':'.$password));
+	if(isset($headers['X-NDM-Challenge'])){
+		$challenge = $headers['X-NDM-Challenge'];
+		$realm = $headers['X-NDM-Realm'];
+	}
+	else{
+		$challenge = $headers['x-ndm-challenge'];
+		$realm = $headers['x-ndm-realm'];
+	}
+	$pass = hash('sha256', $challenge.md5($login.':'.$realm.':'.$password));
 	$post = '{"login": "'. $login . '", "password": "' . $pass . '"}';		
 	curl_setopt($ch, CURLOPT_HTTPHEADER, Array('Content-Type: application/json;charset=UTF-8'));
 	curl_setopt($ch, CURLOPT_COOKIE, $cookies);
@@ -674,11 +686,23 @@ function reboot($id){
     $this->getdata($router, 'system/reboot', '{}');
 }
  
- function WriteLog($msg){
-      if ($this->debug) {
-         DebMes($msg, $this->name);
-      }
-   }
+function WriteLog($msg){
+     if ($this->debug) {
+        DebMes($msg, $this->name);
+     }
+  }
+   
+function isIP($address){
+	$oktets = explode('.', $address);
+	if(count($oktets) == 4){
+		$num = 1;
+		for($i=0; $i<4; $i++){
+			if(!is_numeric($oktets[$i])) $num = 0;
+		}
+		if($num) return true;
+	}
+	return false;
+}
    /**
  * Преобразование секунд в секунды/минуты/часы/дни/года
  * 
