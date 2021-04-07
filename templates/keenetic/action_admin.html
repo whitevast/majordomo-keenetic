@@ -57,6 +57,10 @@
 [#if VIEW_MODE="info_keenetic_devices"#]
    [#inc keenetic_devices_dev_info.html#] 
 [#endif#]
+  <!--# Настройка DNS #-->
+[#if VIEW_MODE="dns_keenetic_routers"#]
+   [#inc keenetic_routers_edit_dns.html#] 
+[#endif#]
  
  <!-- table keenetic_routers edit -->
  [#if VIEW_MODE="edit_keenetic_routers"#]
@@ -66,11 +70,11 @@
   <li[#if TAB=""#] class="active"[#endif#]>
    <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab="><#LANG_GENERAL#></a>
   </li>
-<!--   <li[#if TAB="info"#] class="active"[#endif#]>
-   <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab=info">Информация</a>
-  </li> -->
   <li[#if TAB="data"#] class="active"[#endif#]>
    <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab=data">Устройства</a>
+  </li>
+    <li[#if TAB="dns"#] class="active"[#endif#]>
+   <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab=dns">Управление DNS</a>
   </li>
 </ul>
 &nbsp;<br/>
@@ -78,11 +82,11 @@
    [#if TAB=""#]
     [#inc keenetic_routers_edit_default.html#]
    [#endif TAB#]
-   [#if TAB="info"#]
-    [#inc keenetic_routers_edit_info.html#]
-   [#endif TAB#]
    [#if TAB="data"#]
     [#inc keenetic_routers_edit_data.html#]
+   [#endif TAB#]
+   [#if TAB="dns"#]
+    [#inc keenetic_routers_edit_dns.html#]
    [#endif TAB#]
  [#endif VIEW_MODE#]
  <!-- / table keenetic_routers edit -->
@@ -93,22 +97,4 @@
    [#endif TAB#]
  [#endif VIEW_MODE#]
  <!-- / table keenetic_routers view -->
- [#endif DATA_SOURCE#]
- <!-- action usual -->
- [#if DATA_SOURCE="keenetic_devices"#]
- <!-- table keenetic_devices search -->
- [#if VIEW_MODE="search_keenetic_devices" || VIEW_MODE=""#]
-  [#inc keenetic_devices_search_admin.html#]
- [#endif VIEW_MODE#]
- <!-- / table keenetic_devices search -->
- <!-- table keenetic_devices edit -->
- [#if VIEW_MODE="edit_keenetic_devices"#]
-   [#inc keenetic_devices_edit.html#]
- [#endif VIEW_MODE#]
- <!-- / table keenetic_devices edit -->
- <!-- table keenetic_devices view --> 
- [#if VIEW_MODE="view_keenetic_devices"#]
-   [#inc keenetic_devices_view.html#]
- [#endif VIEW_MODE#]
- <!-- / table keenetic_devices view -->
  [#endif DATA_SOURCE#]

@@ -15,10 +15,10 @@
 	  }
 	  $rec['HREF'] = $link['webhelp']['ru'][0]['href'];
   }
+if ($this->tab=='') {
   if ($this->mode=='update') {
    $ok=1;
   // step: default
-  if ($this->tab=='') {
    $rec['TITLE']=gr('title');
    $rec['ADDRESS']=gr('address');
    $rec['LOGIN']=gr('login');
@@ -50,7 +50,6 @@
 			$out['ERR_ALERT']="Введены неверные данные или устройство недоступно";
 		 }
 	}
-  }
   //UPDATING RECORD
    if ($ok) {
     if ($rec['ID']) {
@@ -80,6 +79,7 @@
     $out['ERR']=1;
    }
   }
+}
   // step: data
   if ($this->tab=='data') {
    //dataset2
@@ -129,7 +129,43 @@
       }
      }
    }
-   $out['PROPERTIES']=$properties;   
+   $out['PROPERTIES']=$properties;  
+  }
+  //Настройка DNS
+if ($this->tab=='dns') {
+	global $delete_domain;
+	if ($delete_domain) {
+		$this->getdata($rec, 'ip/host', '{"domain": "'.$delete_domain.'", "no": "true"}', 1);
+		$this->WriteLog('Из DNS удален домен: '.$delete_domain);
+	}
+	if ($this->mode=='update') {
+		$ok = 1;
+		$domain = gr('title_new');
+		$ip = gr('ip_new');
+		$resp = $this->getdata($rec, 'ip/host', '{"domain": "'.$domain.'", "address": "'.$ip.'"}', 1);
+		//print_r($resp);
+		if($resp['status']['0']['status'] == "error"){
+			$ok = 0;
+			$out['ERR']=1;
+			$out['ERR_ALERT']="Неправильный IP адрес";
+		}
+		$this->WriteLog('В DNS добавлен домен: '.$domain . " " . $ip);
+		if($ok) $out['OK']=1;
+	}
+	$data = $this->getdata($rec, '', '{"show": {"running-config": {}}}');
+	$i = 0;
+	foreach($data['show']['running-config']['message'] as $value){
+		if(strpos($value, "ip host") !== false){
+			$var = str_replace('ip host ', '', $value);
+			if($var){
+				$var = explode(' ', $var);
+				$dns[$i]['TITLE'] = $var[0];
+				$dns[$i]['IP'] = $var[1];
+				$i++;
+			}
+		}
+	}
+   $out['DNS']=$dns;
   }
   if (is_array($rec)) {
    foreach($rec as $k=>$v) {
@@ -139,4 +175,4 @@
    }
   }
   outHash($rec, $out);
-  //print_r($out);
+ // print_r($out);

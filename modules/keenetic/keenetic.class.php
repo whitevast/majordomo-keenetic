@@ -339,18 +339,20 @@ function usual(&$out) {
 	 if($event == 'HOURLY'){
 		 $routers = SQLSelect("SELECT * FROM keenetic_routers");
 		 foreach($routers as $val){
-			 if($val('INET_STATUS')){
+			 if($val['INET_STATUS']){
 				 $firmware = $this->getdata($val, 'components/list', "{}");
-				// print_r($firmware);
+				 //print_r($firmware);
 				 if(!isset($firmware['firmware']['version'])){
 					 setTimeOut('KeeneticWaitUpdate','include_once(DIR_MODULES . "keenetic/keenetic.class.php");
 													$keenetic_module = new keenetic();
 													$keenetic_module->processSubscription("HOURLY");'
-													,2);
+													,5);
+					return;
 				 }
 				 if($firmware['firmware']['version'] != $val['NEW_FIRMWARE']){
 					$val['NEW_FIRMWARE'] = $firmware['firmware']['version'];
 					SQLUpdate('keenetic_routers', $val);
+					$this->WriteLog('Новая версия прошивки: '.$val['NEW_FIRMWARE']);
 				 }
 			 }
 		 }
@@ -460,7 +462,7 @@ function usual(&$out) {
 						$log = ": имя изменено на ". $value['TITLE'].".";
 					}
 					if($value['REGISTERED'] != $devmac[$value['MAC']]['registered']){
-						$value['REGISTERED'] = $devmac[$value['MAC']]['registered'];
+						$value['REGISTERED'] = (int)$devmac[$value['MAC']]['registered'];
 						if($value['REGISTERED'])$log = " зарегистрировано на роутере.";
 						else $log = ": регистрация с роутера удалена.";
 					}
@@ -633,7 +635,7 @@ EOD;
 	if($http_code != 200) return false;
 	if($save){
 		$resp = $this->getdata($router, 'system/configuration/save', '{}');
-		if($resp['message'] == "saving configuration...") $this->WriteLog("Конфигурация сохранена");
+		if($resp['status']['0']['message'] == "saving configuration...") $this->WriteLog("Конфигурация сохранена");
 	}
 	return json_decode($html, 1);
  }
