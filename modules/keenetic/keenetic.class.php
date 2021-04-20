@@ -684,8 +684,9 @@ EOD;
  }
  
 function reboot($id){
-	$router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$id.'"');
-    $this->getdata($router, 'system/reboot', '{}');
+	if ($this->isIP($id)) $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
+	else $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$id.'"');
+	$this->getdata($router, 'system/reboot', '{}');
 }
  
 function WriteLog($msg){
