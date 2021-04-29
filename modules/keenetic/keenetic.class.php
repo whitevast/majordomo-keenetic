@@ -617,6 +617,7 @@ EOD;
 	$html = curl_exec($ch);
 	$http_code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE); // Получаем HTTP-код
 	curl_close($ch);
+	//print_r($html);
 	if (!$html) return false;
 	if($http_code == 401){
 		$cookies = $this->auth($ip, $login, $password);

@@ -65,6 +65,7 @@
 	<div class="clearfix hidden-xs hidden-sm"></div>
 	[#endif ROUTER#]
 [#endif NAME#]
+[#if REGISTERED==1#]
 	<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
 		<fieldset>
 			<br><br>
@@ -103,6 +104,7 @@
 			</div>
 		</fieldset>
 	</form>
+[#endif REGISTERED#]
 </div>
 
 <div class="col-lg-6">

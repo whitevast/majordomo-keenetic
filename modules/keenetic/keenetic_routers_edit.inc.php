@@ -80,7 +80,7 @@ if ($this->tab=='') {
    }
   }
 }
-  // step: data
+  // Вкладка устройств
   if ($this->tab=='data') {
    //dataset2
    $new_id=0;
@@ -91,6 +91,8 @@ if ($this->tab=='') {
    }
    global $delete_id;
    if ($delete_id) {
+	$device = SQLSelectOne('SELECT * FROM keenetic_devices WHERE ID="'.$delete_id.'"');
+	$this->getdata($rec, 'known/host', '{"mac": "'.$device['MAC'].'", "no": "true"}', 1);
     SQLExec("DELETE FROM keenetic_devices WHERE ID='".(int)$delete_id."'");
    }
    global $sortby;
