@@ -697,6 +697,8 @@ function WriteLog($msg){
   }
    
 function isIP($address){
+	$port = strpos($address, ':');
+	if($port) $address = substr($address, 0, $port);
 	$oktets = explode('.', $address);
 	if(count($oktets) == 4){
 		$num = 1;
