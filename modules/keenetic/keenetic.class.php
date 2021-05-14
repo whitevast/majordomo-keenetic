@@ -203,6 +203,17 @@ function usual(&$out) {
  function info_keenetic_devices(&$out, $id) {
 	$rec = SQLSelectOne('SELECT * FROM keenetic_devices WHERE ID="'.$id.'"');
 	$router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$rec['ROUTER_ID'].'"');
+	global $track_device;
+	if($track_device){
+		if($track_device==2) $track_device=0;
+		$rec['TRACK']=(int)$track_device;
+		SQLUpdate('keenetic_devices', $rec);
+		if($track_device==1){
+		addClassObject($router['TITLE'], $rec['TITLE']);
+		}
+		else $this->delete_object($rec['TITLE']);
+	}
+	//print_r($rec);
 	if ($this->mode=='update') {
 		$code = gr('code');
 		$old_code=$rec['SCRIPT'];
@@ -233,52 +244,22 @@ function usual(&$out) {
 		$rec['ADDRESS'] = $isp['address'];
 	}
 	else{
-		$data = $this->getdata($router, '', '{"show": {"mws": {"member": {}}, "ip": {"hotspot": {"mac": "'.$rec['MAC'].'"}},"interface": {}}}');
+		$data = $this->getdata($router, '', '{"show": {"mws": {"member": {}}, "ip": {"hotspot": {"mac": "'.$rec['MAC'].'"}}, "interface": {}}}');
 		$host = $data['show']['ip']['hotspot']['host'][0];
 		$interfaces = $data['show']['mws']['member'];
 		$wifies = $data['show']['interface'];
-		foreach($interfaces as $value){;
-			$interface[$value['cid']] = $value['known-host'];
-		}
-		$uptime = $host['uptime'];
-		$rec['HOSTNAME'] = $host['hostname'];
-		$rec['RXBYTES'] = round($host['rxbytes']/1024/1024, 1);
-		$rec['TXBYTES'] = round($host['txbytes']/1024/1024, 1);
-		if(isset($host['mws'])){
-			$cidwifi = $host['mws']['ap'];
-			$rec['ROUTER'] = $interface[$host['mws']['cid']];
-			$rec['WIFI_MODE'] = $host['mws']['mode'];
-			if(isset($host['mws']['_11'])){
-				foreach($host['mws']['_11'] as $mode){
-					$rec['WIFI_MODE'] = $rec['WIFI_MODE'].'/'.$mode;
-				}
-			}
-			$rec['WIFI_MODE'] = $rec['WIFI_MODE'].' '.($host['mws']['txss']==1?'1x1':'2x2').' '.$host['mws']['ht'].'МГц '.$host['mws']['txrate'].'Мбит';
-			$rec['RSSI'] = $host['mws']['rssi'];
-		} else if(isset($host['ap'])){
-			$cidwifi = $host['ap'];
-			$rec['ROUTER'] = $router['MODEL'];
-			$rec['WIFI_MODE'] = $host['mode'];
-			if(isset($host['_11'])){
-				foreach($host['_11'] as $mode){
-					$rec['WIFI_MODE'] = $rec['WIFI_MODE'].'/'.$mode;
-				}
-			}
-			$rec['WIFI_MODE'] = $rec['WIFI_MODE'].' '.($host['txss']==1?'1x1':'2x2').' '.$host['ht'].'МГц '.$host['txrate'].'Мбит'; 
-			$rec['RSSI'] = $host['rssi'];
-		}
+		$info = $this->parse_data($router, $host, $interfaces, $wifies);
+		$rec = array_merge($rec, $info);
+		$uptime = $rec['UPTIME'];
+		unset($rec['UPTIME']);
+		$rec['RXBYTES'] = round($rec['RXBYTES']/1024/1024, 1);
+		$rec['TXBYTES'] = round($rec['TXBYTES']/1024/1024, 1);
+		$rec['ROUTER'] = $rec['ROUTER'].' '.$rec['FREQ'].' ('.$rec['NET'].')';
 	}
 	
 	$uptime = $this->seconds2times($uptime);
 	$times_values = array('',':',':','д.','лет');
 	for ($i = count($uptime)-1; $i >= 0; $i--) $rec['UPTIME'] = $rec['UPTIME'] . $uptime[$i] . $times_values[$i];
-	
-	foreach($wifies as $iface){
-		if($cidwifi == $iface['id']){
-			$wifiap = explode("/", $iface['id']);
-			$rec['ROUTER'] = $rec['ROUTER'].' '.((int)substr($wifiap[0], -1)==1?'5ГГц':'2.4ГГц').' ('.$iface['ssid'].')';		
-		}
-	}
 	
 	if (is_array($rec)) {
 		foreach($rec as $k=>$v) {
@@ -290,7 +271,7 @@ function usual(&$out) {
 	//	print_r($rec);
 	outHash($rec, $out);
 	$out['LOG']=nl2br($rec['LOG']);
-//	print_r($out);
+	//print_r($out);
 }
 /**
 * keenetic_routers delete record
@@ -300,6 +281,7 @@ function usual(&$out) {
  function delete_keenetic_routers($id) {
   $rec=SQLSelectOne("SELECT * FROM keenetic_routers WHERE ID='$id'");
   // some action for related tables
+  $this->delete_class($rec['TITLE']); //удаляем класс
   SQLExec("DELETE FROM keenetic_routers WHERE ID='".$rec['ID']."'");
   $properties=SQLSelect("SELECT * FROM keenetic_devices WHERE ROUTER_ID='".$rec['ID']."' AND LINKED_OBJECT != '' AND LINKED_PROPERTY != ''");
     foreach($properties as $prop) {
@@ -361,48 +343,48 @@ function usual(&$out) {
  function processCycle() {
  //$this->getConfig();
 	$routers = SQLSelect("SELECT * FROM keenetic_routers");
- 	foreach($routers as $val){
-	//	print_r($val);
+ 	foreach($routers as $router){
+	//	print_r($router);
 		$update = 0;
-		$getdata = $this->getdata($val, '', '{"show": {"version": {}, "identification": {}, "ip":{"hotspot":{}}, "internet":{"status":{}}}}');
+		$getdata = $this->getdata($router, '', '{"show": {"version": {}, "identification": {}, "ip":{"hotspot":{}}, "internet":{"status":{}}, "mws": {"member": {}}, "interface": {}}}');
 		if(!$getdata){
-			if($val['STATUS'] == 1){
-				$val['STATUS'] = 0;
+			if($router['STATUS'] == 1){
+				$router['STATUS'] = 0;
 				$update = 1;
 			}
 		} 
 		else {
-			if($val['STATUS'] == 0) {
-				$val['STATUS'] = 1;
+			if($router['STATUS'] == 0) {
+				$router['STATUS'] = 1;
 				$update = 1;
 			}
-			if($val['FIRMWARE'] != $getdata['show']['version']['release']){
-				$val['FIRMWARE'] = $getdata['show']['version']['release'];
-				$this->WriteLog('Прошивка на '.$val['TITLE'].' обновлена на версию '.$val['FIRMWARE']);
+			if($router['FIRMWARE'] != $getdata['show']['version']['release']){
+				$router['FIRMWARE'] = $getdata['show']['version']['release'];
+				$this->WriteLog('Прошивка на '.$router['TITLE'].' обновлена на версию '.$router['FIRMWARE']);
 				$update = 1;
 			}
-			if($getdata['show']['internet']['status']['internet'] != $val['INET_STATUS']){
+			if($getdata['show']['internet']['status']['internet'] != $router['INET_STATUS']){
 				$log = "";
 				if($getdata['show']['internet']['status']['internet']){
-					$val['INET_STATUS'] = 1;
+					$router['INET_STATUS'] = 1;
 					$log = "восстановлено.";
 					ClearTimeOut('KeeneticReboot');
 				} else {
 					$log = "";
-					if($val['AUTO_REBOOT'] != 0){
-						$log = 'потеряно. Таймер перезагрузки на '.$val['AUTO_REBOOT'].' секунд активирован.';
-						setTimeOut('KeeneticReboot','include_once(DIR_MODULES . "keenetic/keenetic.class.php");$keenetic_module = new keenetic();$keenetic_module->reboot('.$val['ID'].');',$val['AUTO_REBOOT']);
+					if($router['AUTO_REBOOT'] != 0){
+						$log = 'потеряно. Таймер перезагрузки на '.$router['AUTO_REBOOT'].' секунд активирован.';
+						setTimeOut('KeeneticReboot','include_once(DIR_MODULES . "keenetic/keenetic.class.php");$keenetic_module = new keenetic();$keenetic_module->reboot('.$router['ID'].');',$router['AUTO_REBOOT']);
 					} 
 					else $log = 'потеряно.';
-					$val['INET_STATUS'] = 0;
+					$router['INET_STATUS'] = 0;
 				}
-				$array = SQLSelectOne('SELECT * FROM keenetic_devices WHERE IP="0.0.0.0" AND ROUTER_ID="'.$val['ID'].'"');
+				$array = SQLSelectOne('SELECT * FROM keenetic_devices WHERE IP="0.0.0.0" AND ROUTER_ID="'.$router['ID'].'"');
 				$array['LOG'] = date('Y-m-d H:i:s')." Соединение с интернетом ".$log."\n".$array['LOG'];
 					if(substr_count($array['LOG'], "\n") > 30){ //очищаем самые давние события, если их более 30
 						$array['LOG'] = substr($array['LOG'], 0, strrpos(trim($array['LOG']), "\n"));
 					}
 				$this->WriteLog("Соединение с интернетом ".$log);
-				$array['STATUS'] = $val['INET_STATUS'];
+				$array['STATUS'] = $router['INET_STATUS'];
 				$array['UPDATED'] = date('Y-m-d H:i:s');
 				SQLUpdate('keenetic_devices', $array); //обновляем статус в таблице устройств
 				$this->setProperty($array, $array['STATUS']);//обновляем свойство
@@ -420,9 +402,17 @@ function usual(&$out) {
 				$devmac[$valuedev['mac']] = $valuedev;
             }
 			//Проверка изменений
-			$devicesindb = SQLSelect("SELECT * FROM keenetic_devices WHERE ROUTER_ID='".$val['ID']."'");
+			$devicesindb = SQLSelect("SELECT ID, ROUTER_ID, TITLE, MAC, IP, STATUS, TYPE_CONNECT, REGISTERED, TRACK, SCRIPT, LINKED_OBJECT, LINKED_PROPERTY, LINKED_METHOD, UPDATED FROM keenetic_devices WHERE ROUTER_ID='".$router['ID']."'");
 			foreach ($devicesindb as $value){ //Если устройство из БД есть в устройствах, отданных роутером
 				if(isset($devmac[$value['MAC']])){ //
+					if($value['TRACK']){
+						$host = $devmac[$value['MAC']];
+						$interfaces = $getdata['show']['mws']['member'];
+						$wifies = $getdata['show']['interface'];
+						$info = $this->parse_data($router, $host, $interfaces, $wifies);
+						$object = 'Keenetic.'.$router['TITLE'].'.'.$value['TITLE'];
+						callMethod($value['TITLE'].'.track', $info);
+					}
 					$log = "";
 					if($value['STATUS'] != $devmac[$value['MAC']]['link']){
 						$device = $devmac[$value['MAC']];
@@ -479,7 +469,7 @@ function usual(&$out) {
 					if($value['TITLE'] == "Интернет") continue;
 					if($value['LINKED_OBJECT']) continue; //если есть привязанный объект, не удаляем
 					SQLExec("DELETE FROM keenetic_devices WHERE ID='".$value['ID']."'");
-					$this->WriteLog("Устройство ".$value['TITLE'].", MAC: ".$value['MAC']." удалено c ".$val['TITLE'].".");
+					$this->WriteLog("Устройство ".$value['TITLE'].", MAC: ".$value['MAC']." удалено c ".$router['TITLE'].".");
 				}
             }
 			//Добавляем устройства, которых нет в БД, в БД
@@ -491,7 +481,7 @@ function usual(&$out) {
 				$new['REGISTERED'] = (int)$value['registered'];
 				if(isset($value['ap']) or isset($value['mws']))	$new['TYPE_CONNECT'] = 1;
 				else $new['TYPE_CONNECT'] = 0;
-				$new['ROUTER_ID'] = $val['ID'];
+				$new['ROUTER_ID'] = $router['ID'];
 				$new['SCRIPT'] ='if($status){ //если устройство появилось в сети;
 	
 }
@@ -500,12 +490,12 @@ else{ //если устройство отключилось от сети;
 }';
 				$new['UPDATED'] = date('Y-m-d H:i:s');
 				SQLInsert('keenetic_devices', $new);
-				$this->WriteLog("Устройство ".$new['TITLE'].", MAC: ".$new['MAC']." добавлено на ".$val['TITLE'].".");
+				$this->WriteLog("Устройство ".$new['TITLE'].", MAC: ".$new['MAC']." добавлено на ".$router['TITLE'].".");
 			}
 			unset($devmac);
 		}
 			if($update){
-			SQLUpdate('keenetic_routers', $val);
+			SQLUpdate('keenetic_routers', $router);
 		}
 	}
  }
@@ -529,6 +519,24 @@ function setProperty($device, $value, $params = ''){
 */
  function install($data='') {
   subscribeToEvent($this->name, 'HOURLY');
+  addClass('Keenetic');
+  $code = '$this->setProperty("uptime", $params["UPTIME"]);
+$this->setProperty("rxbytes", $params["RXBYTES"]);
+$this->setProperty("txbytes", $params["TXBYTES"]);
+$this->setProperty("router", $params["ROUTER"]);
+$this->setProperty("net", $params["NET"]);
+$this->setProperty("frequency", $params["FREQ"]);
+$this->setProperty("mode", $params["WIFI_MODE"]);
+$this->setProperty("rssi", $params["RSSI"]);';
+  addClassMethod('Keenetic', 'track', $code);
+  addClassProperty('Keenetic', 'uptime');
+  addClassProperty('Keenetic', 'rxbytes');
+  addClassProperty('Keenetic', 'txbytes');
+  addClassProperty('Keenetic', 'router');
+  addClassProperty('Keenetic', 'net');
+  addClassProperty('Keenetic', 'frequency');
+  addClassProperty('Keenetic', 'mode');
+  addClassProperty('Keenetic', 'rssi');
   parent::install();
  }
 /**
@@ -546,6 +554,7 @@ function setProperty($device, $value, $params = ''){
   }
   SQLExec('DROP TABLE IF EXISTS keenetic_routers');
   SQLExec('DROP TABLE IF EXISTS keenetic_devices');
+  $this->delete_class("Keenetic");
   parent::uninstall();
  }
 /**
@@ -576,13 +585,14 @@ keenetic_devices -
  keenetic_routers: AUTO_REBOOT smallint unsigned NOT NULL DEFAULT 0
  keenetic_routers: UPDATED datetime
  keenetic_devices: ID int(10) unsigned NOT NULL auto_increment
+ keenetic_devices: ROUTER_ID int(10) NOT NULL DEFAULT '0'
  keenetic_devices: TITLE varchar(100) NOT NULL DEFAULT ''
  keenetic_devices: MAC varchar(20) NOT NULL DEFAULT ''
  keenetic_devices: IP varchar(20) NOT NULL DEFAULT ''
  keenetic_devices: STATUS boolean NOT NULL DEFAULT 0
  keenetic_devices: TYPE_CONNECT varchar(10) NOT NULL DEFAULT ''
  keenetic_devices: REGISTERED boolean NOT NULL DEFAULT 0
- keenetic_devices: ROUTER_ID int(10) NOT NULL DEFAULT '0'
+ keenetic_devices: TRACK boolean NOT NULL DEFAULT 0
  keenetic_devices: LOG text
  keenetic_devices: SCRIPT text
  keenetic_devices: LINKED_OBJECT varchar(100) NOT NULL DEFAULT ''
@@ -709,6 +719,47 @@ function isIP($address){
 	}
 	return false;
 }
+
+function parse_data($router, $host, $interfaces, $wifies){
+	foreach($interfaces as $value){;
+		$interface[$value['cid']] = $value['known-host'];
+	}
+	$rec['UPTIME'] = $host['uptime'];
+	$rec['HOSTNAME'] = $host['hostname'];
+	$rec['RXBYTES'] = $host['rxbytes'];
+	$rec['TXBYTES'] = $host['txbytes'];
+	if(isset($host['mws'])){ //если подключено к экстендеру
+		$cidwifi = $host['mws']['ap'];
+		$rec['ROUTER'] = $interface[$host['mws']['cid']]; //название роутера
+		$rec['WIFI_MODE'] = $host['mws']['mode'];
+		if(isset($host['mws']['_11'])){
+			foreach($host['mws']['_11'] as $mode){
+				$rec['WIFI_MODE'] = $rec['WIFI_MODE'].'/'.$mode; //стандарт
+			}
+		}
+		$rec['WIFI_MODE'] = $rec['WIFI_MODE'].' '.($host['mws']['txss']==1?'1x1':'2x2').' '.$host['mws']['ht'].'МГц '.$host['mws']['txrate'].'Мбит'; //режми (стандарт, режми, частота, скорость)
+		$rec['RSSI'] = $host['mws']['rssi']; //rssi
+	} else if(isset($host['ap'])){ //если подключено к контроллеру
+		$cidwifi = $host['ap'];
+		$rec['ROUTER'] = $router['MODEL']; //название роутера
+		$rec['WIFI_MODE'] = $host['mode'];
+		if(isset($host['_11'])){
+			foreach($host['_11'] as $mode){
+				$rec['WIFI_MODE'] = $rec['WIFI_MODE'].'/'.$mode;
+			}
+		}
+		$rec['WIFI_MODE'] = $rec['WIFI_MODE'].' '.($host['txss']==1?'1x1':'2x2').' '.$host['ht'].'МГц '.$host['txrate'].'Мбит'; //режми (стандарт, режми, частота, скорость)
+		$rec['RSSI'] = $host['rssi']; //rssi
+	}
+	foreach($wifies as $iface){
+		if($cidwifi == $iface['id']){
+			$wifiap = explode("/", $iface['id']);
+			$rec['FREQ'] = (int)substr($wifiap[0], -1)==1?'5ГГц':'2.4ГГц'; //Частота
+			$rec['NET'] = $iface['ssid']; //Имя точки доступа
+		}
+	}
+	return $rec;
+}
    /**
  * Преобразование секунд в секунды/минуты/часы/дни/года
  * 
@@ -748,6 +799,23 @@ function seconds2times($seconds)
 	
 	$times[0] = $seconds;
 	return $times;
+}
+
+function delete_object($name){
+	$obj=getObject($name);
+	if($obj){
+		include_once(DIR_MODULES . "objects/objects.class.php");
+		$objects_module = new objects();
+		$objects_module->delete_objects($obj->id);
+	}
+}
+function delete_class($name){
+	$class_id = SQLSelectOne("SELECT ID FROM classes WHERE TITLE='".$name."'"); // удялем класс
+	if($class_id){
+		include_once(DIR_MODULES . "classes/classes.class.php");
+		$classes_module = new classes();
+		$classes_module->delete_classes($class_id['ID']);
+	}
 }
 }
 

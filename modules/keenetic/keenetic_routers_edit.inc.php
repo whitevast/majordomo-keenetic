@@ -44,6 +44,7 @@ if ($this->tab=='') {
 			$rec['STATUS'] = 1;
 			$rec['INET_STATUS'] = $data['internet']['status']['internet'];
 			$rec['UPDATED'] = date('Y-m-d H:i:s');
+			addClass($rec['TITLE'], "Keenetic");
 		 }
 		 else{
 			$ok=0;
