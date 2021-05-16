@@ -151,6 +151,30 @@
          </div>
       </div>
    </div>
+   <div class="panel panel-info">
+      <div class="panel-heading">
+         <a data-toggle="collapse" data-parent="#accordion" href="#functions_help">Функции</a>
+      </div>
+      <div class="panel-body collapse" id="functions_help">
+        <div style="width:900px">
+		  <p>На добавленном к модулю роутере можно выполнять <b>произвольные команды</b> с помощью следующего кода:</p>
+			<i>include_once(DIR_MODULES . "keenetic/keenetic.class.php");<br>
+			$keenetic_module = new keenetic();<br>
+			$keenetic_module->command('IP роутера', 'Команда', 1)<br>
+			</i><br>
+			<p>Третий параметр функции (по умолчанию - false) указывает, сохранять ли настройки. Это соответствует команде cli "system configuration save".</p>
+			<p>Функция возвращает ответ в виде ассоциативного массива</p>
+			<p>Команды отправляются в виде JSON объекта, содержащего команду, соответственно справочнику cli роутеров Keenetic. Например, команда "show ip hotspot" будет выглядеть следующим образом: "{"show": {"ip": {"hotspot": {}}}}"</p>
+			<p>Команды удобно тестировать в веб-интерфейсе Кинетика по адресу http://IP_роутера/a</p>
+			<br>
+			<p>Также можно <b>перезагружать</b> роутер с помощью следующего кода:</p>
+			<i>include_once(DIR_MODULES . "keenetic/keenetic.class.php");<br>
+			$keenetic_module = new keenetic();<br>
+			$keenetic_module->reboot('IP роутера')<br>
+			</i><br>
+		</div>
+      </div>
+   </div>
       <div class="panel panel-info">
       <div class="panel-heading">
          <a data-toggle="collapse" data-parent="#accordion" href="#dns_help">Управление DNS</a>

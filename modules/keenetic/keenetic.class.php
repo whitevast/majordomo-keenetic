@@ -694,6 +694,13 @@ EOD;
 	return $cookies;
  }
  
+function command($id, $data, $save=false){
+	if ($this->isIP($id)) $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
+	else $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$id.'"');
+	$response = $this->getdata($router, '', $data, $save);
+	return $response;
+}
+ 
 function reboot($id){
 	if ($this->isIP($id)) $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
 	else $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$id.'"');
