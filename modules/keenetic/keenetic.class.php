@@ -457,7 +457,7 @@ function usual(&$out) {
 						else $log = ": регистрация с роутера удалена.";
 					}
 					if($log != ""){
-						$value['LOG'] = date('Y-m-d H:i:s')." Устройство ".$value['TITLE'].$log."\n".$value['LOG'];
+						$value['LOG'] = date('Y-m-d H:i:s')." Устройство ".$value['TITLE'].$log."\n".SQLSelectOne('SELECT LOG FROM keenetic_devices WHERE MAC="'.$value['MAC'].'"')['LOG'];
 						if(substr_count($value['LOG'], "\n") > 30){ //очищаем самые давние события, если их более 30
 							$value['LOG'] = substr($value['LOG'], 0, strrpos(trim($value['LOG']), "\n"));
 						}
