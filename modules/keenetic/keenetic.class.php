@@ -389,6 +389,20 @@ function usual(&$out) {
 				SQLUpdate('keenetic_devices', $array); //обновляем статус в таблице устройств
 				$this->setProperty($array, $array['STATUS']);//обновляем свойство
 				$update = 1;
+				$status = $router['INET_STATUS'];
+				print "Соединение с интернетом ".$log;
+				$code = SQLSelectOne("SELECT SCRIPT FROM keenetic_devices WHERE ROUTER_ID='".$router['ID']."' and TITLE='Интернет'" )['SCRIPT'];
+					$errors = php_syntax_error($code);
+					if ($errors){
+					$line = preg_replace('/[^0-9]/', '', substr(stristr($errors, 'php on line '), 0, 18));
+						$errorStr = explode('Parse error: ', htmlspecialchars(strip_tags(nl2br($errors))));
+						$errorStr = explode('Errors parsing', $errorStr[1]);
+						$errorStr = explode(' in ', $errorStr[0]);
+						$errors = $errorStr[0].' on line '.$line;
+						$this->WriteLog("Ошибка в коде: ".$code);
+						registerError('Keenetic', "Error in code: " . $code. PHP_EOL . PHP_EOL . $errors . PHP_EOL);
+					}
+					else eval($code);
 			}
 
 			//Предобработка списка устройств
