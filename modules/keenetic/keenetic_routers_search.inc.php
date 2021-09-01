@@ -30,5 +30,5 @@
     // some action for every record if required
    }
    $out['RESULT']=$res;
-  // print_r($res);
+   //print_r($res);
   }

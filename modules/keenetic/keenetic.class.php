@@ -254,7 +254,7 @@ function usual(&$out) {
 		unset($rec['UPTIME']);
 		$rec['RXBYTES'] = round($rec['RXBYTES']/1024/1024, 1);
 		$rec['TXBYTES'] = round($rec['TXBYTES']/1024/1024, 1);
-		$rec['ROUTER'] = $rec['ROUTER'].' '.$rec['FREQ'].' ('.$rec['NET'].')';
+		if($rec['ROUTER']) $rec['ROUTER'] = $rec['ROUTER'].' '.$rec['FREQ'].' ('.$rec['NET'].')';
 	}
 	
 	$uptime = $this->seconds2times($uptime);
@@ -411,7 +411,7 @@ function usual(&$out) {
 				if($valuedev['name'] == "") $valuedev['name'] = $valuedev['hostname'];
 				if(!isset($valuedev['link'])) $valuedev['link'] = 0;
 				else if($valuedev['link'] == "up") $valuedev['link'] = 1;
-				else $valuedev['link'] = 0;
+				else if($valuedev['link'] == "down") $valuedev['link'] = 0;
 				if($valuedev['ip'] == "0.0.0.0") $valuedev['link'] = 0;
 				$devmac[$valuedev['mac']] = $valuedev;
             }
@@ -428,33 +428,6 @@ function usual(&$out) {
 						callMethod($value['TITLE'].'.track', $info);
 					}
 					$log = "";
-					if($value['STATUS'] != $devmac[$value['MAC']]['link']){
-						$device = $devmac[$value['MAC']];
-						$status = (int)$devmac[$value['MAC']]['link'];
-						$value['STATUS'] = (int)$devmac[$value['MAC']]['link'];
-						$this->setProperty($value, $value['STATUS'], $device);
-						if($value['STATUS']) $log = " в сети";
-						else $log = " не в сети";
-						if($value['STATUS'] == 1){ //проверяем и изменяем тип подключения
-							if(isset($devmac[$value['MAC']]['ap']) or isset($devmac[$value['MAC']]['mws'])){
-								if($value['TYPE_CONNECT'] == 0) $value['TYPE_CONNECT'] = 1;
-							} else {
-								if($value['TYPE_CONNECT'] == 1) $value['TYPE_CONNECT'] = 0;
-							}
-						}
-						$code = $value['SCRIPT'];
-						$errors = php_syntax_error($code);
-						if ($errors){
-							$line = preg_replace('/[^0-9]/', '', substr(stristr($errors, 'php on line '), 0, 18));
-							$errorStr = explode('Parse error: ', htmlspecialchars(strip_tags(nl2br($errors))));
-							$errorStr = explode('Errors parsing', $errorStr[1]);
-							$errorStr = explode(' in ', $errorStr[0]);
-							$errors = $errorStr[0].' on line '.$line;
-							$this->WriteLog("Ошибка в коде: ".$code);
-							registerError('Keenetic', "Error in code: " . $code. PHP_EOL . PHP_EOL . $errors . PHP_EOL);
-						}
-						else eval($code);
-					}
 					if($value['IP'] != $devmac[$value['MAC']]['ip']){
 						If($devmac[$value['MAC']]['ip'] != "0.0.0.0"){
 							$value['IP'] = $devmac[$value['MAC']]['ip'];
@@ -469,6 +442,40 @@ function usual(&$out) {
 						$value['REGISTERED'] = (int)$devmac[$value['MAC']]['registered'];
 						if($value['REGISTERED'])$log = " зарегистрировано на роутере.";
 						else $log = ": регистрация с роутера удалена.";
+					}
+										if($value['STATUS'] != $devmac[$value['MAC']]['link']){
+						if($devmac[$value['MAC']]['link'] == 1){ //проверяем и изменяем тип подключения
+							if(isset($devmac[$value['MAC']]['ap']) or isset($devmac[$value['MAC']]['mws'])){
+								if($value['TYPE_CONNECT'] == 0) $value['TYPE_CONNECT'] = 1;
+							} else {
+								if($value['TYPE_CONNECT'] == 1) $value['TYPE_CONNECT'] = 0;
+							}
+						}
+						else{ //дополнительно запрашиваем статус устройства, если устройство подключено проводом (с ВайФай ложных срабатываний не наблюдалось)
+							if($value['TYPE_CONNECT'] == 0){
+								$device = $this->getdata($router, '', '{"show":{"ip":{"hotspot":{"mac":"'.$value['MAC'].'"}}}}');
+								$device = $device['show']['ip']['hotspot']['host']['0'];
+								if($device['link'] == "up") continue;
+							}
+						}
+						$device = $devmac[$value['MAC']];
+						$status = (int)$devmac[$value['MAC']]['link'];
+						$value['STATUS'] = (int)$devmac[$value['MAC']]['link'];
+						$this->setProperty($value, $value['STATUS'], $device);
+						if($value['STATUS']) $log = " в сети";
+						else $log = " не в сети";
+						$code = $value['SCRIPT'];
+						$errors = php_syntax_error($code);
+						if ($errors){
+							$line = preg_replace('/[^0-9]/', '', substr(stristr($errors, 'php on line '), 0, 18));
+							$errorStr = explode('Parse error: ', htmlspecialchars(strip_tags(nl2br($errors))));
+							$errorStr = explode('Errors parsing', $errorStr[1]);
+							$errorStr = explode(' in ', $errorStr[0]);
+							$errors = $errorStr[0].' on line '.$line;
+							$this->WriteLog("Ошибка в коде: ".$code);
+							registerError('Keenetic', "Error in code: " . $code. PHP_EOL . PHP_EOL . $errors . PHP_EOL);
+						}
+						else eval($code);
 					}
 					if($log != ""){
 						$value['LOG'] = date('Y-m-d H:i:s')." Устройство ".$value['TITLE'].$log."\n".SQLSelectOne('SELECT LOG FROM keenetic_devices WHERE MAC="'.$value['MAC'].'"')['LOG'];
