@@ -335,6 +335,9 @@ function usual(&$out) {
 					$val['NEW_FIRMWARE'] = $firmware['firmware']['version'];
 					SQLUpdate('keenetic_routers', $val);
 					$this->WriteLog('Новая версия прошивки: '.$val['NEW_FIRMWARE']);
+					if(method_exists($this, 'sendnotification')) {
+						$this->sendnotification('Новая версия прошивки для '.$router['TITLE'].': '.$val['NEW_FIRMWARE'], 'danger');
+					}
 				 }
 			 }
 		 }
@@ -361,6 +364,9 @@ function usual(&$out) {
 			if($router['FIRMWARE'] != $getdata['show']['version']['release']){
 				$router['FIRMWARE'] = $getdata['show']['version']['release'];
 				$this->WriteLog('Прошивка на '.$router['TITLE'].' обновлена на версию '.$router['FIRMWARE']);
+				if(method_exists($this, 'sendnotification')) {
+					$this->sendnotification('Прошивка на '.$router['TITLE'].' обновлена на версию '.$router['FIRMWARE'].'.', 'info');
+				}
 				$update = 1;
 			}
 			if($getdata['show']['internet']['status']['internet'] != $router['INET_STATUS']){
@@ -455,7 +461,7 @@ function usual(&$out) {
 							if($value['TYPE_CONNECT'] == 0){
 								$device = $this->getdata($router, '', '{"show":{"ip":{"hotspot":{"mac":"'.$value['MAC'].'"}}}}');
 								$device = $device['show']['ip']['hotspot']['host']['0'];
-								if($device['link'] == "up") continue;
+								if($device['link'] == "up") $devmac[$value['MAC']]['link'] = 1;
 							}
 						}
 						$device = $devmac[$value['MAC']];

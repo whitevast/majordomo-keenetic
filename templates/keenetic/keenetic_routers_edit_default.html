@@ -54,11 +54,11 @@
   <b><span class = "text-danger">Новая прошивка:</span></b> [#NEW_FIRMWARE#] <a href="[#HREF#]" target="_blank">Список изменений</a><br>
   [#endif FIRMWARE#]
   <b>Серийный номер:</b> [#SERIAL#] <br>
-  <b>Статус:</b> [#if STATUS==1#]<span class="label label-success" title="Статус приложения">ONLINE</span>
-				[#else#]<span class="label label-danger" title="Статус приложения">OFFLINE</span>
+  <b>Статус:</b> [#if STATUS==1#]<span class="label label-success" title="Интернет есть">ONLINE</span>
+				[#else#]<span class="label label-danger" title="Интернета нет">OFFLINE</span>
 				[#endif STATUS#]<br>
-  <b>Интернет:</b> [#if INET_STATUS==1#]<span class="label label-success" title="Статус приложения">ONLINE</span>
-				[#else#]<span class="label label-danger" title="Статус приложения">OFFLINE</span>
+  <b>Интернет:</b> [#if INET_STATUS==1#]<span class="label label-success" title="Устройство доступно">ONLINE</span>
+				[#else#]<span class="label label-danger" title="У)стройство недоступно">OFFLINE</span>
 				[#endif INET_STATUS#]<br>
 [#endif ID#]
 </div>

@@ -39,11 +39,11 @@
  <td>[#ADDRESS#]</td>
  <td>[#MODEL#]</td>
  <td>[#if UPDATE!=""#]<span class="label label-danger" title="Есть обновление">[#FIRMWARE#]</span>[#else#][#FIRMWARE#][#endif#]</td>
- <td>[#if STATUS==1#]<span class="label label-success" title="Статус соединения с роутеро">ONLINE</span>
-	[#else#]<span class="label label-danger" title="Статус соединения с роутером">OFFLINE</span>
+ <td>[#if STATUS==1#]<span class="label label-success" title="Устройство доступно">ONLINE</span>
+	[#else#]<span class="label label-danger" title="Устройство недоступно">OFFLINE</span>
 	[#endif STATUS#]</td>
- <td>[#if INET_STATUS==1#]<span class="label label-success" title="Статус соединения с Интернет">ONLINE</span>
-	[#else#]<span class="label label-danger" title="Статус соединения с Интернет">OFFLINE</span>
+ <td>[#if INET_STATUS==1#]<span class="label label-success" title="Интернет есть">ONLINE</span>
+	[#else#]<span class="label label-danger" title="Интернета нет">OFFLINE</span>
 	[#endif INET_STATUS#]</td>
  <td width="1%" nowrap>
   <div>
