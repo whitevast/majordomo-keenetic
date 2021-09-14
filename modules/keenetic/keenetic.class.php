@@ -413,14 +413,15 @@ function usual(&$out) {
 
 			//Предобработка списка устройств
 			$devices = $getdata['show']['ip']['hotspot']['host'];
+			$devices = is_array($devices) ? $devices : array($devices);
 			foreach ($devices as $valuedev){
 				if($valuedev['name'] == "") $valuedev['name'] = $valuedev['hostname'];
 				if(!isset($valuedev['link'])) $valuedev['link'] = 0;
 				else if($valuedev['link'] == "up") $valuedev['link'] = 1;
 				else if($valuedev['link'] == "down") $valuedev['link'] = 0;
 				if($valuedev['ip'] == "0.0.0.0") $valuedev['link'] = 0;
-				$devmac[$valuedev['mac']] = $valuedev;
-            }
+				$devmac[$valuedev['mac']] = $valuedev
+			}
 			//Проверка изменений
 			$devicesindb = SQLSelect("SELECT ID, ROUTER_ID, TITLE, MAC, IP, STATUS, TYPE_CONNECT, REGISTERED, TRACK, SCRIPT, LINKED_OBJECT, LINKED_PROPERTY, LINKED_METHOD, UPDATED FROM keenetic_devices WHERE ROUTER_ID='".$router['ID']."'");
 			foreach ($devicesindb as $value){ //Если устройство из БД есть в устройствах, отданных роутером
