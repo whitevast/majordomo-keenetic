@@ -336,7 +336,7 @@ function usual(&$out) {
 					SQLUpdate('keenetic_routers', $val);
 					$this->WriteLog('Новая версия прошивки: '.$val['NEW_FIRMWARE']);
 					if(method_exists($this, 'sendnotification')) {
-						$this->sendnotification('Новая версия прошивки для '.$router['TITLE'].': '.$val['NEW_FIRMWARE'], 'danger');
+						$this->sendnotification('Новая версия прошивки для '.$val['TITLE'].': '.$val['NEW_FIRMWARE'], 'danger');
 					}
 				 }
 			 }
@@ -413,6 +413,9 @@ function usual(&$out) {
 
 			//Предобработка списка устройств
 			$devices = $getdata['show']['ip']['hotspot']['host'];
+			if(!is_array($devices)) {
+				$this->WriteLog($devices);
+			}
 			foreach ($devices as $valuedev){
 				if($valuedev['name'] == "") $valuedev['name'] = $valuedev['hostname'];
 				if(!isset($valuedev['link'])) $valuedev['link'] = 0;
@@ -449,8 +452,8 @@ function usual(&$out) {
 						if($value['REGISTERED'])$log = " зарегистрировано на роутере.";
 						else $log = ": регистрация с роутера удалена.";
 					}
-										if($value['STATUS'] != $devmac[$value['MAC']]['link']){
-						if($devmac[$value['MAC']]['link'] == 1){ //проверяем и изменяем тип подключения
+					if($value['STATUS'] != $devmac[$value['MAC']]['link']){
+						if($devmac[$value['MAC']]['link'] == 1){ // если устройство подключилось, проверяем и изменяем тип подключения
 							if(isset($devmac[$value['MAC']]['ap']) or isset($devmac[$value['MAC']]['mws'])){
 								if($value['TYPE_CONNECT'] == 0) $value['TYPE_CONNECT'] = 1;
 							} else {
@@ -461,7 +464,11 @@ function usual(&$out) {
 							if($value['TYPE_CONNECT'] == 0){
 								$device = $this->getdata($router, '', '{"show":{"ip":{"hotspot":{"mac":"'.$value['MAC'].'"}}}}');
 								$device = $device['show']['ip']['hotspot']['host']['0'];
-								if($device['link'] == "up") $devmac[$value['MAC']]['link'] = 1;
+								print_r($device);
+								if($device['link'] == "up"){
+									unset($devmac[$value['MAC']]); //удаляем устройства из массива, иначе оно будет считаться не числящимся в БД
+									continue;
+								}
 							}
 						}
 						$device = $devmac[$value['MAC']];
@@ -491,7 +498,7 @@ function usual(&$out) {
 						$value['UPDATED'] = date('Y-m-d H:i:s');
 						SQLUpdate('keenetic_devices', $value);
 					}
-					unset($devmac[$value['MAC']]);
+					unset($devmac[$value['MAC']]); //удаляем устройства из массива, иначе оно будет считаться не числящимся в БД
 				} else { //Если устройства из БД нет в устройствах, отданных роутером, удаляем устройство из БД
 					if($value['TITLE'] == "Интернет") continue;
 					if($value['LINKED_OBJECT']) continue; //если есть привязанный объект, не удаляем
