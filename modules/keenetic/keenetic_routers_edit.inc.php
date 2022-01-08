@@ -85,6 +85,11 @@ if ($this->tab=='') {
   if ($this->tab=='data') {
    //dataset2
    $new_id=0;
+   global $wol_id;
+   if ($wol_id) {
+    $device = SQLSelectOne('SELECT * FROM keenetic_devices WHERE ID="'.$wol_id.'"');
+    $this->wol($rec['ID'], $device['MAC']);
+   }
    global $register_id;
    if ($register_id) {
     $device = SQLSelectOne('SELECT * FROM keenetic_devices WHERE ID="'.$register_id.'"');

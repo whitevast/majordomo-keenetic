@@ -11,8 +11,8 @@
 <legend><#LANG_NEW_RECORD#></legend>
 [#endif ID#]
 <div class="form-group">
-<div>
-<table class="table table-stripped">
+<div class="table-responsive">
+<table class="table table-striped">
  <tr>
   <td><b><a href="?data_source=&view_mode=edit_keenetic_routers&id=<#ID#>&tab=data&sortby=TITLE"><#LANG_TITLE#></a></br></td>
   <td><b><a href="?data_source=&view_mode=edit_keenetic_routers&id=<#ID#>&tab=data&sortby=MAC">MAC</a><br></td>
@@ -36,7 +36,7 @@
   <td valign="top">[#MAC#]</td>
   <td valign="top">[#IP#]</td>
   <td class="text-center">[#if STATUS==1#]<span class="label label-success" title="Статус устройства">ONLINE</span>
-		[#else#]<span class="label label-danger" title="Статус устройства">OFFLINE</span>
+		[#else#]<a href="?id=<#ID#>&tab=<#TAB#>&view_mode=<#VIEW_MODE#>&wol_id=[#ID#]" onClick="return confirm('Отправить пакет WOL?');" class="label label-danger" title="Статус устройства">OFFLINE</a>
 		[#endif STATUS#]</td>
   <td valign="top" class="text-center">[#if TYPE_CONNECT==0#]<span><b>LAN</b></span>
 		[#else#]<span><b>Wi-Fi</b></span>

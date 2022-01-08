@@ -12,6 +12,7 @@
 	[#else#]
 		<span class="label label-danger" title="Статус цикла">Цикл остановлен</span>
 	[#endif#]
+	&nbsp;&nbsp;<img align="middle" src="../templates/keenetic/keenetic.svg" height="20">
   <!--# Кнопка 'Справка'. #-->
      <a href="?view_mode=show_help" class="btn btn-default btn-sm float-right" title="Справка"><i class="glyphicon glyphicon-question-sign"></i></a>
 </div>
@@ -29,7 +30,7 @@
 				 </label>
 				  <div class="col-lg-4"><input id="cycle_time" name="cycle_time" value="[#CYCLE_TIME#]" type="text" class="input"></div>
                <input type="checkbox" name="log_debmes" value="1"[#if LOG_DEBMES="1"#] checked[#endif#]> 
-               <span class='text' data-toggle="tooltip" title="Запись обмена сообщениями между сервером и ТВ в отдельный лог-файл YYYY-mm-dd_keenetic.log.">Отладка  DebMes</span>
+               <span class='text' data-toggle="tooltip" title="Запись в отдельный лог-файл YYYY-mm-dd_keenetic.log.">Отладка  DebMes</span>
             </div>
          </div>
 <div class="form-actions">

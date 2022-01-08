@@ -536,14 +536,14 @@ else{ //если устройство отключилось от сети;
  
  //Запись в привязанное свойство
 function setProperty($device, $value, $params = ''){
-        if ($device['LINKED_OBJECT'] && $device['LINKED_PROPERTY']) {
-			setGlobal($device['LINKED_OBJECT'] . '.' . $device['LINKED_PROPERTY'], $value, 0, 'keenetic_module');
-        }
-		if ($device['LINKED_OBJECT'] && $device['LINKED_METHOD']) {
-			$params['VALUE'] = $value;
-			callMethodSafe($device['LINKED_OBJECT'] . '.' . $device['LINKED_METHOD'], $params);
-        }
+    if ($device['LINKED_OBJECT'] && $device['LINKED_PROPERTY']) {
+		setGlobal($device['LINKED_OBJECT'] . '.' . $device['LINKED_PROPERTY'], $value, 0, 'keenetic_module');
     }
+	if ($device['LINKED_OBJECT'] && $device['LINKED_METHOD']) {
+		$params['VALUE'] = $value;
+		callMethodSafe($device['LINKED_OBJECT'] . '.' . $device['LINKED_METHOD'], $params);
+    }
+}
 /**
 * Install
 *
@@ -691,6 +691,7 @@ EOD;
 	$ch = curl_init($prefix.$ip.'/auth');
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_HEADER, true);
+	curl_setopt($ch, CURLOPT_NOBODY);
 	curl_setopt($ch, CURLOPT_COOKIE, $cookies);
 	$html = curl_exec($ch);
 	preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $html, $matches); //вытаскиваем куки
@@ -739,6 +740,12 @@ function reboot($id){
 	if ($this->isIP($id)) $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
 	else $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$id.'"');
 	$this->getdata($router, 'system/reboot', '{}');
+}
+
+function wol($id, $mac){
+	if ($this->isIP($id)) $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
+	else $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$id.'"');
+	$this->getdata($router, 'ip/hotspot/wake', '{"mac": "'.$mac.'"}');
 }
  
 function WriteLog($msg){
