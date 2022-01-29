@@ -21,6 +21,14 @@ if ($this->tab=='') {
   // step: default
    $rec['TITLE']=gr('title');
    $rec['ADDRESS']=gr('address');
+   $length = strlen($rec['ADDRESS']);
+   while(strrpos($rec['ADDRESS'], "/") == $length-1){ //убираем символы "/" в конце
+	$rec['ADDRESS']=substr($rec['ADDRESS'], 0, -1);
+	$length = strlen($rec['ADDRESS']);
+   } 
+   while(strpos($rec['ADDRESS'], "/") !== false){ //убираем все до и символы "/" в начале
+	$rec['ADDRESS']=substr($rec['ADDRESS'], strpos($rec['ADDRESS'], "/")+1);
+   }  
    $rec['LOGIN']=gr('login');
    $rec['PASSWORD']=gr('password');
    $rec['AUTO_REBOOT']=gr('reboot');
