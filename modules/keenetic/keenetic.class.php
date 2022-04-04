@@ -244,7 +244,9 @@ function usual(&$out) {
 		$rec['ADDRESS'] = $isp['address'];
 	}
 	else{
-		$data = $this->getdata($router, '', '{"show": {"mws": {"member": {}}, "ip": {"hotspot": {"mac": "'.$rec['MAC'].'"}}, "interface": {}}}');
+		if($router['MWS']) $mws =  '"mws": {"member": {}}, ';
+		else $mws = "";
+		$data = $this->getdata($router, '', '{"show": {'.$mws.'"ip": {"hotspot": {"mac": "'.$rec['MAC'].'"}}, "interface": {}}}');
 		$host = $data['show']['ip']['hotspot']['host'][0];
 		$interfaces = $data['show']['mws']['member'];
 		$wifies = $data['show']['interface'];
@@ -347,9 +349,11 @@ function usual(&$out) {
  //$this->getConfig();
 	$routers = SQLSelect("SELECT * FROM keenetic_routers");
  	foreach($routers as $router){
-	//	print_r($router);
+		//print_r($router);
 		$update = 0;
-		$getdata = $this->getdata($router, '', '{"show": {"version": {}, "identification": {}, "ip":{"hotspot":{}}, "internet":{"status":{}}, "mws": {"member": {}}, "interface": {}}}');
+		if($router['MWS']) $mws =  ', "mws": {"member": {}}';
+		else $mws = "";
+		$getdata = $this->getdata($router, '', '{"show": {"version": {}, "identification": {}, "ip":{"hotspot":{}}, "internet":{"status":{}}, "interface": {}'.$mws.'}}');
 		if(!$getdata){
 			if($router['STATUS'] == 1){
 				$router['STATUS'] = 0;
@@ -359,6 +363,16 @@ function usual(&$out) {
 		else {
 			if($router['STATUS'] == 0) {
 				$router['STATUS'] = 1;
+				$update = 1;
+			}
+			$components = explode(",", $getdata['show']['version']['ndw']['components']);
+			$mws = 0;
+			//print_r($components);
+			foreach($components as $name) {
+				if($name == 'mws') $mws = 1;
+			}
+			if($router['MWS'] != $mws){
+				$router['MWS'] = $mws;
 				$update = 1;
 			}
 			if($router['FIRMWARE'] != $getdata['show']['version']['release']){
@@ -529,13 +543,14 @@ else{ //если устройство отключилось от сети;
 			unset($devmac);
 		}
 			if($update){
-			SQLUpdate('keenetic_routers', $router);
+				$router['UPDATED'] = date('Y-m-d H:i:s');
+				SQLUpdate('keenetic_routers', $router);
 		}
 	}
  }
  
- //Запись в привязанное свойство
-function setProperty($device, $value, $params = ''){
+ //Запись в привязанное свойство/метод
+ function setProperty($device, $value, $params = ''){
     if ($device['LINKED_OBJECT'] && $device['LINKED_PROPERTY']) {
 		setGlobal($device['LINKED_OBJECT'] . '.' . $device['LINKED_PROPERTY'], $value, 0, 'keenetic_module');
     }
@@ -614,6 +629,7 @@ keenetic_devices -
  keenetic_routers: FIRMWARE varchar(20) NOT NULL DEFAULT ''
  keenetic_routers: NEW_FIRMWARE varchar(20) NOT NULL DEFAULT ''
  keenetic_routers: SERIAL varchar(20) NOT NULL DEFAULT ''
+ keenetic_routers: MWS boolean NOT NULL DEFAULT 0
  keenetic_routers: STATUS boolean NOT NULL DEFAULT 0
  keenetic_routers: INET_STATUS boolean NOT NULL DEFAULT 0
  keenetic_routers: AUTO_REBOOT smallint unsigned NOT NULL DEFAULT 0

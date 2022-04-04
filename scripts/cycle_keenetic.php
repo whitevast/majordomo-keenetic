@@ -21,12 +21,12 @@ if($keenetic_module->config['CYCLE_TIME'] != "") $checkEvery = $keenetic_module-
 else $checkEvery = 5;
 $timeUpdate = 0;
 //Добавляем отсутствующие столбцы в таблицу
-$query = mysqli_fetch_all(SQLExec("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'keenetic_devices'"), MYSQLI_NUM);
-$track = 1;
+$query = mysqli_fetch_all(SQLExec("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'keenetic_routers'"), MYSQLI_NUM);
+$mws = 1;
 foreach($query as $name) {
-	if($name[0] == 'TRACK') $track = 0;
+	if($name[0] == 'MWS') $mws = 0;
 }
-if($track) SQLExec("ALTER TABLE keenetic_devices ADD COLUMN TRACK boolean NOT NULL DEFAULT 0 AFTER REGISTERED");
+if($mws) SQLExec("ALTER TABLE keenetic_routers ADD COLUMN MWS boolean NOT NULL DEFAULT 0 AFTER REGISTERED");
 //
 while (1)
 {
