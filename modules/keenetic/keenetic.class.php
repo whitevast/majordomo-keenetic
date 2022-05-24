@@ -559,8 +559,26 @@ else{ //если устройство отключилось от сети;
 		callMethodSafe($device['LINKED_OBJECT'] . '.' . $device['LINKED_METHOD'], $params);
     }
 }
+
+// Глобальный поиск по модулю
+ function findData($data) {
+    $res = array();
+	//Keenetic routers
+    $routers = SQLSelect("SELECT ID, TITLE, MODEL FROM keenetic_routers where `TITLE` like '%" . DBSafe($data) . "%' OR `MODEL` like '%" . DBSafe($data) . "%' OR `ADDRESS` like '%" . DBSafe($data) . "%'  order by TITLE");
+	foreach($routers as $router){
+         $res[]= '&nbsp;<span class="label label-info">routers</span>&nbsp;<a href="/panel/keenetic.html?md=keenetic&inst=adm&view_mode=edit_keenetic_routers&id=' . $router['ID'] . '.html">' . $router['TITLE'].($router['MODEL'] ? '<small style="color: gray;padding-left: 5px;"><i class="glyphicon glyphicon-arrow-right" style="font-size: .8rem;vertical-align: text-top;color: lightgray;"></i> ' . $router['MODEL'] . '</small>' : ''). '</a>';
+    }
+      //Keenetic devices
+    $devices = SQLSelect("SELECT ID, TITLE, IP, ROUTER_ID FROM keenetic_devices where `TITLE` like '%" . DBSafe($data) . "%' OR `MAC` like '%" . DBSafe($data) . "%' OR `IP` like '%" . DBSafe($data) . "%'  order by TITLE");
+    foreach($devices as $device){
+		$routr = SQLSelectOne('SELECT TITLE FROM keenetic_routers WHERE ID="'.$device['ROUTER_ID'].'"');
+		$res[]= '&nbsp;<span class="label label-info">'.$routr['TITLE'].'</span>&nbsp;<span class="label label-primary">devices</span>&nbsp;<a href="/panel/keenetic.html?md=keenetic&inst=adm&view_mode=info_keenetic_devices&id=' . $device['ID'] . '.html">' . $device['TITLE']. ($device['IP'] ? '<small style="color: gray;padding-left: 5px;"><i class="glyphicon glyphicon-arrow-right" style="font-size: .8rem;vertical-align: text-top;color: lightgray;"></i> ' . $device['IP'] . '</small>' : '').'</a>';
+    }
+    return $res;
+ }
+
 /**
-* Install
+* Install\
 *
 * Module installation routine
 *
