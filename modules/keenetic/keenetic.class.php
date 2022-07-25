@@ -238,7 +238,12 @@ function usual(&$out) {
 	}
 	if($rec['MAC'] == "0.0.0.0.0.0"){
 		$interface = $this->getdata($router, 'show/interface');
-		$isp = $interface[$interface['ISP']['usedby']['0']];
+		foreach($interface as $iface){
+			if($iface['interface-name'] == "ISP"){
+			$isp = $interface[$iface['usedby']['0']];
+			continue;
+			}
+		}
 		$uptime = $isp['uptime'];
 		$rec['NAME'] = $isp['description'];
 		$rec['ADDRESS'] = $isp['address'];
@@ -384,6 +389,12 @@ function usual(&$out) {
 				$update = 1;
 			}
 			if($getdata['show']['internet']['status']['internet'] != $router['INET_STATUS']){
+				foreach($getdata['show']['interface'] as $iface){ //получаем название интерфейса, через который подключениы к интернету
+					if($iface['interface-name'] == "ISP"){
+					$isp = $getdata['show']['interface'][$iface['usedby']['0']];
+					continue;
+					}
+				}
 				$log = "";
 				if($getdata['show']['internet']['status']['internet']){
 					$router['INET_STATUS'] = 1;
@@ -404,13 +415,14 @@ function usual(&$out) {
 						$array['LOG'] = substr($array['LOG'], 0, strrpos(trim($array['LOG']), "\n"));
 					}
 				$this->WriteLog("Соединение с интернетом ".$log);
+				$array['IP'] = $isp['address'];
 				$array['STATUS'] = $router['INET_STATUS'];
 				$array['UPDATED'] = date('Y-m-d H:i:s');
 				SQLUpdate('keenetic_devices', $array); //обновляем статус в таблице устройств
 				$this->setProperty($array, $array['STATUS']);//обновляем свойство
 				$update = 1;
 				$status = $router['INET_STATUS'];
-				print "Соединение с интернетом ".$log;
+				//print "Соединение с интернетом ".$log;
 				$code = SQLSelectOne("SELECT SCRIPT FROM keenetic_devices WHERE ROUTER_ID='".$router['ID']."' and TITLE='Интернет'" )['SCRIPT'];
 					$errors = php_syntax_error($code);
 					if ($errors){
@@ -478,7 +490,7 @@ function usual(&$out) {
 							if($value['TYPE_CONNECT'] == 0){
 								$device = $this->getdata($router, '', '{"show":{"ip":{"hotspot":{"mac":"'.$value['MAC'].'"}}}}');
 								$device = $device['show']['ip']['hotspot']['host']['0'];
-								print_r($device);
+								//print_r($device);
 								if($device['link'] == "up"){
 									unset($devmac[$value['MAC']]); //удаляем устройства из массива, иначе оно будет считаться не числящимся в БД
 									continue;

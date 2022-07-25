@@ -34,7 +34,7 @@
   <td valign="top"><input type="text" class="form-control" name="title[#ID#]" id="title[#ID#]" value="[#TITLE#]"></td>
   [#endif TITLE#]
   <td valign="top">[#MAC#]</td>
-  <td valign="top">[#IP#]</td>
+  <td valign="top"><a href="http://[#IP#]" target="_blank">[#IP#]</a></td>
   <td class="text-center">[#if STATUS==1#]<span class="label label-success" title="Статус устройства">ONLINE</span>
 		[#else#]<a href="?id=<#ID#>&tab=<#TAB#>&view_mode=<#VIEW_MODE#>&wol_id=[#ID#]" onClick="return confirm('Отправить пакет WOL?');" class="label label-danger" title="Статус устройства">OFFLINE</a>
 		[#endif STATUS#]</td>
