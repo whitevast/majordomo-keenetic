@@ -409,7 +409,7 @@ function usual(&$out) {
 					else $log = 'потеряно.';
 					$router['INET_STATUS'] = 0;
 				}
-				$array = SQLSelectOne('SELECT * FROM keenetic_devices WHERE IP="0.0.0.0" AND ROUTER_ID="'.$router['ID'].'"');
+				$array = SQLSelectOne('SELECT * FROM keenetic_devices WHERE MAC="0.0.0.0.0.0" AND ROUTER_ID="'.$router['ID'].'"');
 				$array['LOG'] = date('Y-m-d H:i:s')." Соединение с интернетом ".$log."\n".$array['LOG'];
 					if(substr_count($array['LOG'], "\n") > 30){ //очищаем самые давние события, если их более 30
 						$array['LOG'] = substr($array['LOG'], 0, strrpos(trim($array['LOG']), "\n"));
