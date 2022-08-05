@@ -238,15 +238,10 @@ function usual(&$out) {
 	}
 	if($rec['MAC'] == "0.0.0.0.0.0"){
 		$interface = $this->getdata($router, 'show/interface');
-		foreach($interface as $iface){
-			if($iface['interface-name'] == "ISP"){
-			$isp = $interface[$iface['usedby']['0']];
-			continue;
-			}
-		}
-		$uptime = $isp['uptime'];
-		$rec['NAME'] = $isp['description'];
-		$rec['ADDRESS'] = $isp['address'];
+		$isp = $this->backupWAN($interface);
+		$uptime = $isp['UPTIME'];
+		$rec['NAME'] = $isp['NAME'];
+		$rec['ADDRESS'] = $isp['IP'];
 	}
 	else{
 		if($router['MWS']) $mws =  '"mws": {"member": {}}, ';
@@ -355,20 +350,20 @@ function usual(&$out) {
 	$routers = SQLSelect("SELECT * FROM keenetic_routers");
  	foreach($routers as $router){
 		//print_r($router);
-		$update = 0;
+		$update_router = 0;
 		if($router['MWS']) $mws =  ', "mws": {"member": {}}';
 		else $mws = "";
 		$getdata = $this->getdata($router, '', '{"show": {"version": {}, "identification": {}, "ip":{"hotspot":{}}, "internet":{"status":{}}, "interface": {}'.$mws.'}}');
 		if(!$getdata){
 			if($router['STATUS'] == 1){
 				$router['STATUS'] = 0;
-				$update = 1;
+				$update_router = 1;
 			}
 		} 
 		else {
 			if($router['STATUS'] == 0) {
 				$router['STATUS'] = 1;
-				$update = 1;
+				$update_router = 1;
 			}
 			$components = explode(",", $getdata['show']['version']['ndw']['components']);
 			$mws = 0;
@@ -378,7 +373,7 @@ function usual(&$out) {
 			}
 			if($router['MWS'] != $mws){
 				$router['MWS'] = $mws;
-				$update = 1;
+				$update_router = 1;
 			}
 			if($router['FIRMWARE'] != $getdata['show']['version']['release']){
 				$router['FIRMWARE'] = $getdata['show']['version']['release'];
@@ -386,16 +381,12 @@ function usual(&$out) {
 				if(method_exists($this, 'sendnotification')) {
 					$this->sendnotification('Прошивка на '.$router['TITLE'].' обновлена на версию '.$router['FIRMWARE'].'.', 'info');
 				}
-				$update = 1;
+				$update_router = 1;
 			}
+			$log = "";
+			$update = 0;
+			$inet = SQLSelectOne('SELECT * FROM keenetic_devices WHERE MAC="0.0.0.0.0.0" AND ROUTER_ID="'.$router['ID'].'"');
 			if($getdata['show']['internet']['status']['internet'] != $router['INET_STATUS']){
-				foreach($getdata['show']['interface'] as $iface){ //получаем название интерфейса, через который подключениы к интернету
-					if($iface['interface-name'] == "ISP"){
-					$isp = $getdata['show']['interface'][$iface['usedby']['0']];
-					continue;
-					}
-				}
-				$log = "";
 				if($getdata['show']['internet']['status']['internet']){
 					$router['INET_STATUS'] = 1;
 					$log = "восстановлено.";
@@ -409,20 +400,43 @@ function usual(&$out) {
 					else $log = 'потеряно.';
 					$router['INET_STATUS'] = 0;
 				}
-				$array = SQLSelectOne('SELECT * FROM keenetic_devices WHERE MAC="0.0.0.0.0.0" AND ROUTER_ID="'.$router['ID'].'"');
-				$array['LOG'] = date('Y-m-d H:i:s')." Соединение с интернетом ".$log."\n".$array['LOG'];
-					if(substr_count($array['LOG'], "\n") > 30){ //очищаем самые давние события, если их более 30
-						$array['LOG'] = substr($array['LOG'], 0, strrpos(trim($array['LOG']), "\n"));
+				$inet['STATUS'] = $router['INET_STATUS'];
+				$update = 1;
+				$update_router = 1;
+			}
+			if($router['INET_STATUS']){ //если соединение с интернетом есть, проверяем через какой канал подключены
+				$state = $this->backupWAN($getdata['show']['interface']);//получаем активный интерфейс и IP-адрес
+				if($state['STATE']){
+					if($inet['IP'] != $state['IP']){
+						$inet['IP'] = $state['IP'];
+						if($log != "") $log .=" IP адрес: ".$inet['IP'].".";
+						else $log = "изменено. Новый IP: ".$inet['IP'].".";
+						$update = 1;
+					}
+					if($inet['STATUS'] != $state['WAN']+1){
+						$inet['STATUS'] = $state['WAN']+1;
+						if($state['WAN']){
+							if($log != "") $log .=" Включен резервный канал ".$state['WAN'].".";
+							else $log = "переключено на резервный канал ".$state['WAN']+1 .".";
+						}
+						else {
+							if($log != "") $log .=" Включен основной канал.";
+							else $log = "переключено на основной канал.";
+						}
+						$update = 1;
+					}
+				}
+			}
+			if($update){
+				$inet['LOG'] = date('Y-m-d H:i:s')." Соединение с интернетом ".$log."\n".$inet['LOG'];
+					if(substr_count($inet['LOG'], "\n") > 30){ //очищаем самые давние события, если их более 30
+						$inet['LOG'] = substr($inet['LOG'], 0, strrpos(trim($inet['LOG']), "\n"));
 					}
 				$this->WriteLog("Соединение с интернетом ".$log);
-				$array['IP'] = $isp['address'];
-				$array['STATUS'] = $router['INET_STATUS'];
-				$array['UPDATED'] = date('Y-m-d H:i:s');
-				SQLUpdate('keenetic_devices', $array); //обновляем статус в таблице устройств
-				$this->setProperty($array, $array['STATUS']);//обновляем свойство
-				$update = 1;
-				$status = $router['INET_STATUS'];
-				//print "Соединение с интернетом ".$log;
+				$inet['IP'] = $state['IP'];
+				$inet['UPDATED'] = date('Y-m-d H:i:s');
+				SQLUpdate('keenetic_devices', $inet); //обновляем статус в таблице устройств
+				$this->setProperty($inet, $inet['STATUS']);//обновляем свойство
 				$code = SQLSelectOne("SELECT SCRIPT FROM keenetic_devices WHERE ROUTER_ID='".$router['ID']."' and TITLE='Интернет'" )['SCRIPT'];
 					$errors = php_syntax_error($code);
 					if ($errors){
@@ -436,7 +450,6 @@ function usual(&$out) {
 					}
 					else eval($code);
 			}
-
 			//Предобработка списка устройств
 			$devices = $getdata['show']['ip']['hotspot']['host'];
 			if(!is_array($devices)) {
@@ -554,7 +567,7 @@ else{ //если устройство отключилось от сети;
 			}
 			unset($devmac);
 		}
-			if($update){
+			if($update_router){
 				$router['UPDATED'] = date('Y-m-d H:i:s');
 				SQLUpdate('keenetic_routers', $router);
 		}
@@ -731,7 +744,7 @@ EOD;
 	return json_decode($html, 1);
  }
  
- function auth($ip, $login, $password){
+function auth($ip, $login, $password){
 	$prefix = "http://";
 	if(!$this->isIP($ip))$prefix = "https://";
 	$ch = curl_init($prefix.$ip.'/auth');
@@ -773,7 +786,7 @@ EOD;
 		return false;
 	}
 	return $cookies;
- }
+}
  
 function command($id, $data, $save=false){
 	if ($this->isIP($id)) $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
@@ -854,6 +867,40 @@ function parse_data($router, $host, $interfaces, $wifies){
 	}
 	return $rec;
 }
+
+function backupWAN($interface){
+	$i=0;
+	foreach($interface as $iface){
+		if($iface['global'] == "true"){
+			$iifaces[$i] = $iface;
+			$priority[$i] = $iface['priority'];
+			$i++;
+		}
+	}
+	rsort($priority);
+	foreach($iifaces as $iface){
+		$total = count($priority);
+		for($i = 0; $i<$total; $i++){
+			if($priority[$i] == $iface['priority']) $siface[$i] = $iface;
+		}
+	}
+	$total = count($siface);
+	$array['STATE'] = 0;
+	for($i = 0; $i<$total; $i++){
+		if($siface[$i]['connected'] == 'yes'){
+			if($siface[$i]['defaultgw']){
+				$array['STATE'] = 1;
+				$array['NAME'] = $siface[$i]['description'];
+				$array['UPTIME'] = $siface[$i]['uptime'];
+				$array['IP'] = $siface[$i]['address'];
+				$array['WAN'] = $i;
+				break;
+			}
+		}
+	}
+	//print_r($siface[$i]);
+	return $array;
+}
    /**
  * Преобразование секунд в секунды/минуты/часы/дни/года
  * 
@@ -867,8 +914,7 @@ function parse_data($router, $host, $interfaces, $wifies){
  *		$times[4] - года
  *
  */
-function seconds2times($seconds)
-{
+function seconds2times($seconds){
 	$times = array();
 	
 	// считать нули в значениях
