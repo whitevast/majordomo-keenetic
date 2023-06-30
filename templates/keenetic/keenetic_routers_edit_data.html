@@ -36,7 +36,7 @@
   <td valign="top">[#MAC#]</td>
   <td valign="top"><a href="http://[#IP#]" target="_blank">[#IP#]</a></td>
   <td class="text-center">[#if STATUS>0#]<span class="label label-success" title="Статус устройства">ONLINE</span>
-		[#else#]<a href="?id=<#ID#>&tab=<#TAB#>&view_mode=<#VIEW_MODE#>&wol_id=[#ID#]" onClick="return confirm('Отправить пакет WOL?');" class="label label-danger" title="Статус устройства">OFFLINE</a>
+		[#else#]<a href="?id=<#ID#>&tab=<#TAB#>&view_mode=<#VIEW_MODE#>&wol_id=[#ID#]" onclick="return confirm('Отправить пакет WOL?');" class="label label-danger" title="Статус устройства">OFFLINE</a>
 		[#endif STATUS#]</td>
   <td valign="top" class="text-center">[#if TYPE_CONNECT==0#]<span><b>LAN</b></span>
 		[#else#]<span><b>Wi-Fi</b></span>

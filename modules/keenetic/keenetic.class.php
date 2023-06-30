@@ -122,7 +122,7 @@ function run() {
 * @access public
 */
 function admin(&$out) {
- if ((time() - gg('cycle_keeneticRun')) < 25 ) {
+ if ((time() - (int)gg('cycle_keeneticRun')) < 25 ) {
 	$out['CYCLERUN'] = 1;
  } else {
 	$out['CYCLERUN'] = 0;
@@ -282,7 +282,6 @@ function usual(&$out) {
 */
  function delete_keenetic_routers($id) {
   $rec=SQLSelectOne("SELECT * FROM keenetic_routers WHERE ID='$id'");
-  // some action for related tables
   $this->delete_class($rec['TITLE']); //удаляем класс
   SQLExec("DELETE FROM keenetic_routers WHERE ID='".$rec['ID']."'");
   $properties=SQLSelect("SELECT * FROM keenetic_devices WHERE ROUTER_ID='".$rec['ID']."' AND LINKED_OBJECT != '' AND LINKED_PROPERTY != ''");
@@ -417,7 +416,7 @@ function usual(&$out) {
 						$inet['STATUS'] = $state['WAN']+1;
 						if($state['WAN']){
 							if($log != "") $log .=" Включен резервный канал ".$state['WAN'].".";
-							else $log = "переключено на резервный канал ".$state['WAN']+1 .".";
+							else $log = "переключено на резервный канал ".($state['WAN']+1).".";
 						}
 						else {
 							if($log != "") $log .=" Включен основной канал.";
@@ -433,14 +432,14 @@ function usual(&$out) {
 						$inet['LOG'] = substr($inet['LOG'], 0, strrpos(trim($inet['LOG']), "\n"));
 					}
 				$this->WriteLog("Соединение с интернетом ".$log);
-				$inet['IP'] = $state['IP'];
 				$inet['UPDATED'] = date('Y-m-d H:i:s');
 				SQLUpdate('keenetic_devices', $inet); //обновляем статус в таблице устройств
 				$this->setProperty($inet, $inet['STATUS']);//обновляем свойство
+				$status = (int)$inet['STATUS'];
 				$code = SQLSelectOne("SELECT SCRIPT FROM keenetic_devices WHERE ROUTER_ID='".$router['ID']."' and TITLE='Интернет'" )['SCRIPT'];
 					$errors = php_syntax_error($code);
 					if ($errors){
-					$line = preg_replace('/[^0-9]/', '', substr(stristr($errors, 'php on line '), 0, 18));
+						$line = preg_replace('/[^0-9]/', '', substr(stristr($errors, 'php on line '), 0, 18));
 						$errorStr = explode('Parse error: ', htmlspecialchars(strip_tags(nl2br($errors))));
 						$errorStr = explode('Errors parsing', $errorStr[1]);
 						$errorStr = explode(' in ', $errorStr[0]);
@@ -502,6 +501,7 @@ function usual(&$out) {
 						else{ //дополнительно запрашиваем статус устройства, если устройство подключено проводом (с ВайФай ложных срабатываний не наблюдалось)
 							if($value['TYPE_CONNECT'] == 0){
 								$device = $this->getdata($router, '', '{"show":{"ip":{"hotspot":{"mac":"'.$value['MAC'].'"}}}}');
+								if(!$device) continue;
 								$device = $device['show']['ip']['hotspot']['host']['0'];
 								//print_r($device);
 								if($device['link'] == "up"){
@@ -528,6 +528,7 @@ function usual(&$out) {
 							registerError('Keenetic', "Error in code: " . $code. PHP_EOL . PHP_EOL . $errors . PHP_EOL);
 						}
 						else eval($code);
+						
 					}
 					if($log != ""){
 						$value['LOG'] = date('Y-m-d H:i:s')." Устройство ".$value['TITLE'].$log."\n".SQLSelectOne('SELECT LOG FROM keenetic_devices WHERE MAC="'.$value['MAC'].'"')['LOG'];
@@ -733,7 +734,7 @@ EOD;
 			return $html;
 		} else {
 		$this->WriteLog("Ошибка отправки даных. http код: " . $http_code);
-		return -1;
+		return false;
 		}
 	}
 	if($http_code != 200) return false;
@@ -750,7 +751,7 @@ function auth($ip, $login, $password){
 	$ch = curl_init($prefix.$ip.'/auth');
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_HEADER, true);
-	curl_setopt($ch, CURLOPT_NOBODY);
+	//curl_setopt($ch, CURLOPT_NOBODY);
 	curl_setopt($ch, CURLOPT_COOKIE, $cookies);
 	$html = curl_exec($ch);
 	preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $html, $matches); //вытаскиваем куки
@@ -780,7 +781,7 @@ function auth($ip, $login, $password){
 	$html = curl_exec($ch);
 	$http_code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE); // Получаем HTTP-код
 	curl_close($ch);
-	if (!$html) return -1;
+	if (!isset($html)) return -1;
 	if ($http_code != 200){
 		$this->WriteLog("Ошибка авторизации. ".$html);
 		return false;
@@ -871,7 +872,7 @@ function parse_data($router, $host, $interfaces, $wifies){
 function backupWAN($interface){
 	$i=0;
 	foreach($interface as $iface){
-		if($iface['global'] == "true"){
+		if(isset($iface['global']) and $iface['global'] == "true"){
 			$iifaces[$i] = $iface;
 			$priority[$i] = $iface['priority'];
 			$i++;
@@ -892,7 +893,7 @@ function backupWAN($interface){
 				$array['STATE'] = 1;
 				$array['NAME'] = $siface[$i]['description'];
 				$array['UPTIME'] = $siface[$i]['uptime'];
-				$array['IP'] = $siface[$i]['address'];
+				$array['IP'] = isset($siface[$i]['address']) ? $siface[$i]['address'] : "";
 				$array['WAN'] = $i;
 				break;
 			}
