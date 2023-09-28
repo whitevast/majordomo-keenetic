@@ -248,7 +248,7 @@ function usual(&$out) {
 		else $mws = "";
 		$data = $this->getdata($router, '', '{"show": {'.$mws.'"ip": {"hotspot": {"mac": "'.$rec['MAC'].'"}}, "interface": {}}}');
 		$host = $data['show']['ip']['hotspot']['host'][0];
-		$interfaces = $data['show']['mws']['member'];
+		$interfaces = $router['MWS'] ? $data['show']['mws']['member'] : "";
 		$wifies = $data['show']['interface'];
 		$info = $this->parse_data($router, $host, $interfaces, $wifies);
 		$rec = array_merge($rec, $info);
@@ -260,8 +260,11 @@ function usual(&$out) {
 	}
 	
 	$uptime = $this->seconds2times($uptime);
-	$times_values = array('',':',':','д.','лет');
-	for ($i = count($uptime)-1; $i >= 0; $i--) $rec['UPTIME'] = $rec['UPTIME'] . $uptime[$i] . $times_values[$i];
+	$times_values = array('',':',':','д.','год');
+	for ($i = count($uptime)-1; $i >= 0; $i--){
+		if(strlen($uptime[$i]) == 1) $uptime[$i] = "0".$uptime[$i];
+		$rec['UPTIME'] = $rec['UPTIME'] . $uptime[$i] . $times_values[$i];
+	}
 	
 	if (is_array($rec)) {
 		foreach($rec as $k=>$v) {
@@ -468,7 +471,7 @@ function usual(&$out) {
 				if(isset($devmac[$value['MAC']])){ //
 					if($value['TRACK']){
 						$host = $devmac[$value['MAC']];
-						$interfaces = $getdata['show']['mws']['member'];
+						$interfaces = $router['MWS'] ? $getdata['show']['mws']['member'] : "";
 						$wifies = $getdata['show']['interface'];
 						$info = $this->parse_data($router, $host, $interfaces, $wifies);
 						$object = 'Keenetic.'.$router['TITLE'].'.'.$value['TITLE'];
@@ -829,14 +832,14 @@ function isIP($address){
 }
 
 function parse_data($router, $host, $interfaces, $wifies){
-	foreach($interfaces as $value){;
-		$interface[$value['cid']] = $value['known-host'];
-	}
 	$rec['UPTIME'] = $host['uptime'];
 	$rec['HOSTNAME'] = $host['hostname'];
 	$rec['RXBYTES'] = $host['rxbytes'];
 	$rec['TXBYTES'] = $host['txbytes'];
 	if(isset($host['mws'])){ //если подключено к экстендеру
+		foreach($interfaces as $valuevalue){
+			$interface[$value['cid']] = $value['known-host'];
+		}
 		$cidwifi = $host['mws']['ap'];
 		$rec['ROUTER'] = $interface[$host['mws']['cid']]; //название роутера
 		$rec['WIFI_MODE'] = $host['mws']['mode'];

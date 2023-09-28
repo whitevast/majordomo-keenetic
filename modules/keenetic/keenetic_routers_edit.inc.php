@@ -11,7 +11,7 @@
 	  $link = $this->getdata($rec,"webhelp/release-notes",'{"version": "'.$rec['NEW_FIRMWARE'].'", "locale": "ru"}');
 	  while(!isset($link['webhelp']['ru'][0]['href'])){
 		  usleep(300);
-		   $link = $this->getdata($rec, "webhelp/release-notes");
+		  $link = $this->getdata($rec, "webhelp/release-notes");
 	  }
 	  $rec['HREF'] = $link['webhelp']['ru'][0]['href'];
   }

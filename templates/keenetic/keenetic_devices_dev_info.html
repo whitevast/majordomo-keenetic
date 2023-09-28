@@ -65,10 +65,12 @@
 	<div class="clearfix hidden-xs hidden-sm"></div>
 	[#endif ROUTER#]
 [#endif NAME#]
+[#if TITLE!="Интернет"#]
 	<div class="text-left"><h4>Отслеживание</h4></div>
 	<div class="col-lg-2"><b>[#if TRACK==1#]<font color="red">ВКЛЮЧЕНО</font>[#else#]<font color="green">ОТКЛЮЧЕНО</font>[#endif TRACK#]</b></div>
-	<a href="?data_source=<#DATA_SOURCE#>&view_mode=info_keenetic_devices&id=[#ID#]&track_device=[#if TRACK==1#]2[#else#]1[#endif TRACK#]" class="btn btn-default" title="Информация об устройстве">[#if TRACK==1#]Отключить[#else#]Включить[#endif TRACK#]</i></a>
+	<a href="?data_source=<#DATA_SOURCE#>&view_mode=info_keenetic_devices&id=[#ID#]&track_device=[#if TRACK==1#]2[#else#]1[#endif TRACK#]" class="btn btn-default">[#if TRACK==1#]Отключить[#else#]Включить[#endif TRACK#]</i></a>
 	<div class="clearfix hidden-xs hidden-sm"></div>
+[#endif TITLE#]
 [#if REGISTERED==1#]
 	<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
 		<fieldset>
