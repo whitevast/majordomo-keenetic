@@ -203,15 +203,24 @@ function usual(&$out) {
  function info_keenetic_devices(&$out, $id) {
 	$rec = SQLSelectOne('SELECT * FROM keenetic_devices WHERE ID="'.$id.'"');
 	$router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$rec['ROUTER_ID'].'"');
-	global $track_device;
+	$track_device = gr('track_device');
 	if($track_device){
 		if($track_device==2) $track_device=0;
-		$rec['TRACK']=(int)$track_device;
-		SQLUpdate('keenetic_devices', $rec);
+		$ok = 1;
 		if($track_device==1){
-		addClassObject($router['TITLE'], $rec['TITLE']);
+			if(!getObject($rec['TITLE'])) addClassObject($router['TITLE'], $rec['TITLE']);
+			else {
+				$ok=0;
+				$rec['ERR']=1;
+				$rec['ERR_ALERT'] = "Объект с именем \"" . $rec['TITLE'] . "\" уже существует в системе! Переименуйте объект или устройство на интернет-центре.";
+				$track_device = 0;
+			}
 		}
 		else $this->delete_object($rec['TITLE']);
+		if($ok){
+			$rec['TRACK']=(int)$track_device;
+			SQLUpdate('keenetic_devices', $rec);
+		}
 	}
 	//print_r($rec);
 	if ($this->mode=='update') {
@@ -837,7 +846,7 @@ function parse_data($router, $host, $interfaces, $wifies){
 	$rec['RXBYTES'] = $host['rxbytes'];
 	$rec['TXBYTES'] = $host['txbytes'];
 	if(isset($host['mws'])){ //если подключено к экстендеру
-		foreach($interfaces as $valuevalue){
+		foreach($interfaces as $value){
 			$interface[$value['cid']] = $value['known-host'];
 		}
 		$cidwifi = $host['mws']['ap'];

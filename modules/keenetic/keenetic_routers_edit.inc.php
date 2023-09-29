@@ -39,6 +39,10 @@ if ($this->tab=='') {
 	else $out['ERR_ALERT']="Введите пароль";
     $ok=0;
    }
+   if(getObject($rec['TITLE'])){
+	   $out['ERR_ALERT']="Объект с именем \"".$rec['TITLE']."\" уже существует в системе. Выберите другое имя.";
+	   $ok=0;
+   }
     if($ok){
 		 $rec['COOKIES'] = $this->auth($rec['ADDRESS'],$rec['LOGIN'],$rec['PASSWORD']);
 		 if($rec['COOKIES']){
