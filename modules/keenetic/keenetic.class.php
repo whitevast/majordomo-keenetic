@@ -129,15 +129,8 @@ function admin(&$out) {
  }
  $this->getConfig();
  $out['LOG_DEBMES']=$this->config['LOG_DEBMES'];
- $out['CYCLE_TIME']=$this->config['CYCLE_TIME'];
- if (!$out['CYCLE_TIME']) {
-  $out['CYCLE_TIME']=5;
- }
  if ($this->view_mode=='update_settings') {
-   global $log_debmes;
-   global $cycle_time;
-   $this->config['LOG_DEBMES']=$log_debmes;
-   $this->config['CYCLE_TIME']=$cycle_time;
+   $this->config['LOG_DEBMES']=gr('log_debmes');
    $this->saveConfig();
    setGlobal('cycle_keeneticControl','restart');
    $this->redirect("?");
@@ -334,9 +327,9 @@ function usual(&$out) {
 	 if($event == 'HOURLY'){
 		 $routers = SQLSelect("SELECT * FROM keenetic_routers");
 		 foreach($routers as $val){
-			 if($val['INET_STATUS']){
+			 if($val['STATUS'] and $val['INET_STATUS']){
 				 $firmware = $this->getdata($val, 'components/list', "{}");
-				 //print_r($firmware);
+				 //print_r($firmware['firmware']['version']);
 				 if(!isset($firmware['firmware']['version'])){
 					 setTimeOut('KeeneticWaitUpdate','include_once(DIR_MODULES . "keenetic/keenetic.class.php");
 													$keenetic_module = new keenetic();
@@ -361,174 +354,97 @@ function usual(&$out) {
 	$routers = SQLSelect("SELECT * FROM keenetic_routers");
  	foreach($routers as $router){
 		//print_r($router);
-		$update_router = 0;
-		if($router['MWS']) $mws =  ', "mws": {"member": {}}';
-		else $mws = "";
-		$getdata = $this->getdata($router, '', '{"show": {"version": {}, "identification": {}, "ip":{"hotspot":{}}, "internet":{"status":{}}, "interface": {}'.$mws.'}}');
-		if(!$getdata){
-			if($router['STATUS'] == 1){
-				$router['STATUS'] = 0;
-				$update_router = 1;
-			}
-		} 
-		else {
-			if($router['STATUS'] == 0) {
-				$router['STATUS'] = 1;
-				$update_router = 1;
-			}
-			$components = explode(",", $getdata['show']['version']['ndw']['components']);
-			$mws = 0;
-			//print_r($components);
-			foreach($components as $name) {
-				if($name == 'mws') $mws = 1;
-			}
-			if($router['MWS'] != $mws){
-				$router['MWS'] = $mws;
-				$update_router = 1;
-			}
-			if($router['FIRMWARE'] != $getdata['show']['version']['release']){
-				$router['FIRMWARE'] = $getdata['show']['version']['release'];
-				$this->WriteLog('Прошивка на '.$router['TITLE'].' обновлена на версию '.$router['FIRMWARE']);
-				if(method_exists($this, 'sendnotification')) {
-					$this->sendnotification('Прошивка на '.$router['TITLE'].' обновлена на версию '.$router['FIRMWARE'].'.', 'info');
+		if(time() - $router['REQ_UPDATE'] >= $router['REQ_PERIOD']){
+			$update_router = 0;
+			if($router['MWS']) $mws =  ', "mws": {"member": {}}';
+			else $mws = "";
+			$getdata = $this->getdata($router, '', '{"show": {"system": {}, "version": {}, "identification": {}, "ip":{"hotspot":{}}, "internet":{"status":{}}, "interface": {}'.$mws.'}}');
+			if(!$getdata){
+				if($router['STATUS'] == 1){
+					$router['STATUS'] = 0;
+					$update_router = 1;
 				}
-				$update_router = 1;
-			}
-			$log = "";
-			$update = 0;
-			$inet = SQLSelectOne('SELECT * FROM keenetic_devices WHERE MAC="0.0.0.0.0.0" AND ROUTER_ID="'.$router['ID'].'"');
-			if($getdata['show']['internet']['status']['internet'] != $router['INET_STATUS']){
-				if($getdata['show']['internet']['status']['internet']){
-					$router['INET_STATUS'] = 1;
-					$log = "восстановлено.";
-					ClearTimeOut('KeeneticReboot');
-				} else {
-					$log = "";
-					if($router['AUTO_REBOOT'] != 0){
-						$log = 'потеряно. Таймер перезагрузки на '.$router['AUTO_REBOOT'].' секунд активирован.';
-						setTimeOut('KeeneticReboot','include_once(DIR_MODULES . "keenetic/keenetic.class.php");$keenetic_module = new keenetic();$keenetic_module->reboot('.$router['ID'].');',$router['AUTO_REBOOT']);
-					} 
-					else $log = 'потеряно.';
-					$router['INET_STATUS'] = 0;
+			} 
+			else {
+				if($router['STATUS'] == 0) {
+					$router['STATUS'] = 1;
+					$update_router = 1;
 				}
-				$inet['STATUS'] = $router['INET_STATUS'];
-				$update = 1;
-				$update_router = 1;
-			}
-			if($router['INET_STATUS']){ //если соединение с интернетом есть, проверяем через какой канал подключены
-				$state = $this->backupWAN($getdata['show']['interface']);//получаем активный интерфейс и IP-адрес
-				if($state['STATE']){
-					if($inet['IP'] != $state['IP']){
-						$inet['IP'] = $state['IP'];
-						if($log != "") $log .=" IP адрес: ".$inet['IP'].".";
-						else $log = "изменено. Новый IP: ".$inet['IP'].".";
+				$components = explode(",", $getdata['show']['version']['ndw']['components']);
+				$mws = 0;
+				//print_r($components);
+				foreach($components as $name) {
+					if($name == 'mws') $mws = 1;
+				}
+				if($router['MWS'] != $mws){
+					$router['MWS'] = $mws;
+					$update_router = 1;
+				}
+				if($router['FIRMWARE'] != $getdata['show']['version']['release']){
+					$router['FIRMWARE'] = $getdata['show']['version']['release'];
+					$this->WriteLog('Прошивка на '.$router['TITLE'].' обновлена на версию '.$router['FIRMWARE']);
+					if(method_exists($this, 'sendnotification')) {
+						$this->sendnotification('Прошивка на '.$router['TITLE'].' обновлена на версию '.$router['FIRMWARE'].'.', 'info');
+					}
+					$update_router = 1;
+				}
+				$log = "";
+				$update = 0;
+				if($getdata['show']['system']['uptime'] > 180){ //если после загрузки роутера прошло более трех минут (для того, чтобы успел поднять подключение к интернету)
+					$inet = SQLSelectOne('SELECT * FROM keenetic_devices WHERE MAC="0.0.0.0.0.0" AND ROUTER_ID="'.$router['ID'].'"');
+					if($getdata['show']['internet']['status']['internet'] != $router['INET_STATUS']){
+						if($getdata['show']['internet']['status']['internet']){
+							$router['INET_STATUS'] = 1;
+							$log = "восстановлено.";
+							ClearTimeOut('KeeneticReboot');
+						} else {
+							$log = "";
+							if($router['AUTO_REBOOT'] != 0){
+								$log = 'потеряно. Таймер перезагрузки на '.$router['AUTO_REBOOT'].' секунд активирован.';
+								setTimeOut('KeeneticReboot','include_once(DIR_MODULES . "keenetic/keenetic.class.php");$keenetic_module = new keenetic();$keenetic_module->reboot('.$router['ID'].');',$router['AUTO_REBOOT']);
+							} 
+							else $log = 'потеряно.';
+							$router['INET_STATUS'] = 0;
+						}
+						$inet['STATUS'] = $router['INET_STATUS'];
 						$update = 1;
+						$update_router = 1;
 					}
-					if($inet['STATUS'] != $state['WAN']+1){
-						$inet['STATUS'] = $state['WAN']+1;
-						if($state['WAN']){
-							if($log != "") $log .=" Включен резервный канал ".$state['WAN'].".";
-							else $log = "переключено на резервный канал ".($state['WAN']+1).".";
-						}
-						else {
-							if($log != "") $log .=" Включен основной канал.";
-							else $log = "переключено на основной канал.";
-						}
-						$update = 1;
-					}
-				}
-			}
-			if($update){
-				$inet['LOG'] = date('Y-m-d H:i:s')." Соединение с интернетом ".$log."\n".$inet['LOG'];
-					if(substr_count($inet['LOG'], "\n") > 30){ //очищаем самые давние события, если их более 30
-						$inet['LOG'] = substr($inet['LOG'], 0, strrpos(trim($inet['LOG']), "\n"));
-					}
-				$this->WriteLog("Соединение с интернетом ".$log);
-				$inet['UPDATED'] = date('Y-m-d H:i:s');
-				SQLUpdate('keenetic_devices', $inet); //обновляем статус в таблице устройств
-				$this->setProperty($inet, $inet['STATUS']);//обновляем свойство
-				$status = (int)$inet['STATUS'];
-				$code = SQLSelectOne("SELECT SCRIPT FROM keenetic_devices WHERE ROUTER_ID='".$router['ID']."' and TITLE='Интернет'" )['SCRIPT'];
-					$errors = php_syntax_error($code);
-					if ($errors){
-						$line = preg_replace('/[^0-9]/', '', substr(stristr($errors, 'php on line '), 0, 18));
-						$errorStr = explode('Parse error: ', htmlspecialchars(strip_tags(nl2br($errors))));
-						$errorStr = explode('Errors parsing', $errorStr[1]);
-						$errorStr = explode(' in ', $errorStr[0]);
-						$errors = $errorStr[0].' on line '.$line;
-						$this->WriteLog("Ошибка в коде: ".$code);
-						registerError('Keenetic', "Error in code: " . $code. PHP_EOL . PHP_EOL . $errors . PHP_EOL);
-					}
-					else eval($code);
-			}
-			//Предобработка списка устройств
-			$devices = $getdata['show']['ip']['hotspot']['host'];
-			if(!is_array($devices)) {
-				$this->WriteLog($devices);
-			}
-			foreach ($devices as $valuedev){
-				if($valuedev['name'] == "") $valuedev['name'] = $valuedev['hostname'];
-				if(!isset($valuedev['link'])) $valuedev['link'] = 0;
-				else if($valuedev['link'] == "up") $valuedev['link'] = 1;
-				else if($valuedev['link'] == "down") $valuedev['link'] = 0;
-				if($valuedev['ip'] == "0.0.0.0") $valuedev['link'] = 0;
-				$devmac[$valuedev['mac']] = $valuedev;
-            }
-			//Проверка изменений
-			$devicesindb = SQLSelect("SELECT ID, ROUTER_ID, TITLE, MAC, IP, STATUS, TYPE_CONNECT, REGISTERED, TRACK, SCRIPT, LINKED_OBJECT, LINKED_PROPERTY, LINKED_METHOD, UPDATED FROM keenetic_devices WHERE ROUTER_ID='".$router['ID']."'");
-			foreach ($devicesindb as $value){ //Если устройство из БД есть в устройствах, отданных роутером
-				if(isset($devmac[$value['MAC']])){ //
-					if($value['TRACK']){
-						$host = $devmac[$value['MAC']];
-						$interfaces = $router['MWS'] ? $getdata['show']['mws']['member'] : "";
-						$wifies = $getdata['show']['interface'];
-						$info = $this->parse_data($router, $host, $interfaces, $wifies);
-						$object = 'Keenetic.'.$router['TITLE'].'.'.$value['TITLE'];
-						callMethod($value['TITLE'].'.track', $info);
-					}
-					$log = "";
-					if($value['IP'] != $devmac[$value['MAC']]['ip']){
-						If($devmac[$value['MAC']]['ip'] != "0.0.0.0"){
-							$value['IP'] = $devmac[$value['MAC']]['ip'];
-							$log = ": IP изменен на ". $value['IP'].".";
-						}
-					}
-					if($value['TITLE'] != $devmac[$value['MAC']]['name']){
-						$value['TITLE'] = $devmac[$value['MAC']]['name'];
-						$log = ": имя изменено на ". $value['TITLE'].".";
-					}
-					if($value['REGISTERED'] != $devmac[$value['MAC']]['registered']){
-						$value['REGISTERED'] = (int)$devmac[$value['MAC']]['registered'];
-						if($value['REGISTERED'])$log = " зарегистрировано на роутере.";
-						else $log = ": регистрация с роутера удалена.";
-					}
-					if($value['STATUS'] != $devmac[$value['MAC']]['link']){
-						if($devmac[$value['MAC']]['link'] == 1){ // если устройство подключилось, проверяем и изменяем тип подключения
-							if(isset($devmac[$value['MAC']]['ap']) or isset($devmac[$value['MAC']]['mws'])){
-								if($value['TYPE_CONNECT'] == 0) $value['TYPE_CONNECT'] = 1;
-							} else {
-								if($value['TYPE_CONNECT'] == 1) $value['TYPE_CONNECT'] = 0;
+					if($router['INET_STATUS']){ //если соединение с интернетом есть, проверяем через какой канал подключены
+						$state = $this->backupWAN($getdata['show']['interface']);//получаем активный интерфейс и IP-адрес
+						if($state['STATE']){
+							if($inet['IP'] != $state['IP']){
+								$inet['IP'] = $state['IP'];
+								if($log != "") $log .=" IP адрес: ".$inet['IP'].".";
+								else $log = "изменено. Новый IP: ".$inet['IP'].".";
+								$update = 1;
 							}
-						}
-						else{ //дополнительно запрашиваем статус устройства, если устройство подключено проводом (с ВайФай ложных срабатываний не наблюдалось)
-							if($value['TYPE_CONNECT'] == 0){
-								$device = $this->getdata($router, '', '{"show":{"ip":{"hotspot":{"mac":"'.$value['MAC'].'"}}}}');
-								if(!$device) continue;
-								$device = $device['show']['ip']['hotspot']['host']['0'];
-								//print_r($device);
-								if($device['link'] == "up"){
-									unset($devmac[$value['MAC']]); //удаляем устройства из массива, иначе оно будет считаться не числящимся в БД
-									continue;
+							if($inet['STATUS'] != $state['WAN']+1){
+								$inet['STATUS'] = $state['WAN']+1;
+								if($state['WAN']){
+									if($log != "") $log .=" Включен резервный канал ".$state['WAN'].".";
+									else $log = "переключено на резервный канал ".($state['WAN']+1).".";
 								}
+								else {
+									if($log != "") $log .=" Включен основной канал.";
+									else $log = "переключено на основной канал.";
+								}
+								$update = 1;
 							}
 						}
-						$device = $devmac[$value['MAC']];
-						$status = (int)$devmac[$value['MAC']]['link'];
-						$value['STATUS'] = (int)$devmac[$value['MAC']]['link'];
-						$this->setProperty($value, $value['STATUS'], $device);
-						if($value['STATUS']) $log = " в сети";
-						else $log = " не в сети";
-						$code = $value['SCRIPT'];
+					}
+				}
+				if($update){
+					$inet['LOG'] = date('Y-m-d H:i:s')." Соединение с интернетом ".$log."\n".$inet['LOG'];
+						if(substr_count($inet['LOG'], "\n") > 30){ //очищаем самые давние события, если их более 30
+							$inet['LOG'] = substr($inet['LOG'], 0, strrpos(trim($inet['LOG']), "\n"));
+						}
+					$this->WriteLog("Соединение с интернетом ".$log);
+					$inet['UPDATED'] = date('Y-m-d H:i:s');
+					SQLUpdate('keenetic_devices', $inet); //обновляем статус в таблице устройств
+					$this->setProperty($inet, $inet['STATUS']);//обновляем свойство
+					$status = (int)$inet['STATUS'];
+					$code = SQLSelectOne("SELECT SCRIPT FROM keenetic_devices WHERE ROUTER_ID='".$router['ID']."' and TITLE='Интернет'" )['SCRIPT'];
 						$errors = php_syntax_error($code);
 						if ($errors){
 							$line = preg_replace('/[^0-9]/', '', substr(stristr($errors, 'php on line '), 0, 18));
@@ -540,49 +456,129 @@ function usual(&$out) {
 							registerError('Keenetic', "Error in code: " . $code. PHP_EOL . PHP_EOL . $errors . PHP_EOL);
 						}
 						else eval($code);
-						
-					}
-					if($log != ""){
-						$value['LOG'] = date('Y-m-d H:i:s')." Устройство ".$value['TITLE'].$log."\n".SQLSelectOne('SELECT LOG FROM keenetic_devices WHERE MAC="'.$value['MAC'].'"')['LOG'];
-						if(substr_count($value['LOG'], "\n") > 30){ //очищаем самые давние события, если их более 30
-							$value['LOG'] = substr($value['LOG'], 0, strrpos(trim($value['LOG']), "\n"));
-						}
-						$value['UPDATED'] = date('Y-m-d H:i:s');
-						SQLUpdate('keenetic_devices', $value);
-					}
-					unset($devmac[$value['MAC']]); //удаляем устройства из массива, иначе оно будет считаться не числящимся в БД
-				} else { //Если устройства из БД нет в устройствах, отданных роутером, удаляем устройство из БД
-					if($value['TITLE'] == "Интернет") continue;
-					if($value['LINKED_OBJECT']) continue; //если есть привязанный объект, не удаляем
-					SQLExec("DELETE FROM keenetic_devices WHERE ID='".$value['ID']."'");
-					$this->WriteLog("Устройство ".$value['TITLE'].", MAC: ".$value['MAC']." удалено c ".$router['TITLE'].".");
 				}
-            }
-			//Добавляем устройства, которых нет в БД, в БД
-			foreach ($devmac as $value){
-				$new['TITLE'] = $value['name'];
-				$new['MAC'] = $value['mac'];
-				$new['IP'] = $value['ip'];
-				$new['STATUS'] = (int)$value['active'];
-				$new['REGISTERED'] = (int)$value['registered'];
-				if(isset($value['ap']) or isset($value['mws']))	$new['TYPE_CONNECT'] = 1;
-				else $new['TYPE_CONNECT'] = 0;
-				$new['ROUTER_ID'] = $router['ID'];
-				$new['SCRIPT'] ='if($status){ //если устройство появилось в сети;
-	
-}
-else{ //если устройство отключилось от сети;
-	
-}';
-				$new['UPDATED'] = date('Y-m-d H:i:s');
-				SQLInsert('keenetic_devices', $new);
-				$this->WriteLog("Устройство ".$new['TITLE'].", MAC: ".$new['MAC']." добавлено на ".$router['TITLE'].".");
+				//Предобработка списка устройств
+				$devices = $getdata['show']['ip']['hotspot']['host'];
+				if(!is_array($devices)) {
+					$this->WriteLog($devices);
+				}
+				foreach ($devices as $valuedev){
+					if($valuedev['name'] == "") $valuedev['name'] = $valuedev['hostname'];
+					if(!isset($valuedev['link'])) $valuedev['link'] = 0;
+					else if($valuedev['link'] == "up") $valuedev['link'] = 1;
+					else if($valuedev['link'] == "down") $valuedev['link'] = 0;
+					if($valuedev['ip'] == "0.0.0.0") $valuedev['link'] = 0;
+					$devmac[$valuedev['mac']] = $valuedev;
+				}
+				//Проверка изменений
+				$devicesindb = SQLSelect("SELECT ID, ROUTER_ID, TITLE, MAC, IP, STATUS, TYPE_CONNECT, REGISTERED, TRACK, SCRIPT, LINKED_OBJECT, LINKED_PROPERTY, LINKED_METHOD, UPDATED FROM keenetic_devices WHERE ROUTER_ID='".$router['ID']."'");
+				foreach ($devicesindb as $value){ //Если устройство из БД есть в устройствах, отданных роутером
+					if(isset($devmac[$value['MAC']])){ //
+						if($value['TRACK']){
+							$host = $devmac[$value['MAC']];
+							$interfaces = $router['MWS'] ? $getdata['show']['mws']['member'] : "";
+							$wifies = $getdata['show']['interface'];
+							$info = $this->parse_data($router, $host, $interfaces, $wifies);
+							$object = 'Keenetic.'.$router['TITLE'].'.'.$value['TITLE'];
+							callMethod($value['TITLE'].'.track', $info);
+						}
+						$log = "";
+						if($value['IP'] != $devmac[$value['MAC']]['ip']){
+							If($devmac[$value['MAC']]['ip'] != "0.0.0.0"){
+								$value['IP'] = $devmac[$value['MAC']]['ip'];
+								$log = ": IP изменен на ". $value['IP'].".";
+							}
+						}
+						if($value['TITLE'] != $devmac[$value['MAC']]['name']){
+							$value['TITLE'] = $devmac[$value['MAC']]['name'];
+							$log = ": имя изменено на ". $value['TITLE'].".";
+						}
+						if($value['REGISTERED'] != $devmac[$value['MAC']]['registered']){
+							$value['REGISTERED'] = (int)$devmac[$value['MAC']]['registered'];
+							if($value['REGISTERED'])$log = " зарегистрировано на роутере.";
+							else $log = ": регистрация с роутера удалена.";
+						}
+						if($value['STATUS'] != $devmac[$value['MAC']]['link']){
+							if($devmac[$value['MAC']]['link'] == 1){ // если устройство подключилось, проверяем и изменяем тип подключения
+								if(isset($devmac[$value['MAC']]['ap']) or isset($devmac[$value['MAC']]['mws'])){
+									if($value['TYPE_CONNECT'] == 0) $value['TYPE_CONNECT'] = 1;
+								} else {
+									if($value['TYPE_CONNECT'] == 1) $value['TYPE_CONNECT'] = 0;
+								}
+							}
+							else{ //дополнительно запрашиваем статус устройства, если устройство подключено проводом (с ВайФай ложных срабатываний не наблюдалось)
+								if($value['TYPE_CONNECT'] == 0){
+									$device = $this->getdata($router, '', '{"show":{"ip":{"hotspot":{"mac":"'.$value['MAC'].'"}}}}');
+									if(!$device) continue;
+									$device = $device['show']['ip']['hotspot']['host']['0'];
+									//print_r($device);
+									if($device['link'] == "up"){
+										unset($devmac[$value['MAC']]); //удаляем устройства из массива, иначе оно будет считаться не числящимся в БД
+										continue;
+									}
+								}
+							}
+							$device = $devmac[$value['MAC']];
+							$status = (int)$devmac[$value['MAC']]['link'];
+							$value['STATUS'] = (int)$devmac[$value['MAC']]['link'];
+							$this->setProperty($value, $value['STATUS'], $device);
+							if($value['STATUS']) $log = " в сети";
+							else $log = " не в сети";
+							$code = $value['SCRIPT'];
+							$errors = php_syntax_error($code);
+							if ($errors){
+								$line = preg_replace('/[^0-9]/', '', substr(stristr($errors, 'php on line '), 0, 18));
+								$errorStr = explode('Parse error: ', htmlspecialchars(strip_tags(nl2br($errors))));
+								$errorStr = explode('Errors parsing', $errorStr[1]);
+								$errorStr = explode(' in ', $errorStr[0]);
+								$errors = $errorStr[0].' on line '.$line;
+								$this->WriteLog("Ошибка в коде: ".$code);
+								registerError('Keenetic', "Error in code: " . $code. PHP_EOL . PHP_EOL . $errors . PHP_EOL);
+							}
+							else eval($code);
+							
+						}
+						if($log != ""){
+							$value['LOG'] = date('Y-m-d H:i:s')." Устройство ".$value['TITLE'].$log."\n".SQLSelectOne('SELECT LOG FROM keenetic_devices WHERE MAC="'.$value['MAC'].'"')['LOG'];
+							if(substr_count($value['LOG'], "\n") > 30){ //очищаем самые давние события, если их более 30
+								$value['LOG'] = substr($value['LOG'], 0, strrpos(trim($value['LOG']), "\n"));
+							}
+							$value['UPDATED'] = date('Y-m-d H:i:s');
+							SQLUpdate('keenetic_devices', $value);
+						}
+						unset($devmac[$value['MAC']]); //удаляем устройства из массива, иначе оно будет считаться не числящимся в БД
+					} else { //Если устройства из БД нет в устройствах, отданных роутером, удаляем устройство из БД
+						if($value['TITLE'] == "Интернет") continue;
+						if($value['LINKED_OBJECT']) continue; //если есть привязанный объект, не удаляем
+						SQLExec("DELETE FROM keenetic_devices WHERE ID='".$value['ID']."'");
+						$this->WriteLog("Устройство ".$value['TITLE'].", MAC: ".$value['MAC']." удалено c ".$router['TITLE'].".");
+					}
+				}
+				//Добавляем устройства, которых нет в БД, в БД
+				foreach ($devmac as $value){
+					$new['TITLE'] = $value['name'];
+					$new['MAC'] = $value['mac'];
+					$new['IP'] = $value['ip'];
+					$new['STATUS'] = (int)$value['active'];
+					$new['REGISTERED'] = (int)$value['registered'];
+					if(isset($value['ap']) or isset($value['mws']))	$new['TYPE_CONNECT'] = 1;
+					else $new['TYPE_CONNECT'] = 0;
+					$new['ROUTER_ID'] = $router['ID'];
+					$new['SCRIPT'] ='if($status){ //если устройство появилось в сети;
+		
+	}
+	else{ //если устройство отключилось от сети;
+		
+	}';
+					$new['UPDATED'] = date('Y-m-d H:i:s');
+					SQLInsert('keenetic_devices', $new);
+					$this->WriteLog("Устройство ".$new['TITLE'].", MAC: ".$new['MAC']." добавлено на ".$router['TITLE'].".");
+				}
+				unset($devmac);
 			}
-			unset($devmac);
-		}
-			if($update_router){
-				$router['UPDATED'] = date('Y-m-d H:i:s');
-				SQLUpdate('keenetic_routers', $router);
+			if($update_router) $router['UPDATED'] = date('Y-m-d H:i:s');
+			$router['REQ_UPDATE'] = time();
+			SQLUpdate('keenetic_routers', $router);
 		}
 	}
  }
@@ -690,6 +686,8 @@ keenetic_devices -
  keenetic_routers: INET_STATUS boolean NOT NULL DEFAULT 0
  keenetic_routers: AUTO_REBOOT smallint unsigned NOT NULL DEFAULT 0
  keenetic_routers: UPDATED datetime
+ keenetic_routers: REQ_PERIOD smallint unsigned NOT NULL DEFAULT 5
+ keenetic_routers: REQ_UPDATE int(10) unsigned NOT NULL DEFAULT 0
  keenetic_devices: ID int(10) unsigned NOT NULL auto_increment
  keenetic_devices: ROUTER_ID int(10) NOT NULL DEFAULT '0'
  keenetic_devices: TITLE varchar(100) NOT NULL DEFAULT ''

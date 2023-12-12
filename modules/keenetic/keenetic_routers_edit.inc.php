@@ -31,7 +31,6 @@ if ($this->tab=='') {
    }  
    $rec['LOGIN']=gr('login');
    $rec['PASSWORD']=gr('password');
-   $rec['AUTO_REBOOT']=gr('reboot');
    if ($rec['TITLE']=='' or $rec['ADDRESS']=='' or $rec['LOGIN']=='' or $rec['PASSWORD']=='') {
     if($rec['TITLE']=='') $out['ERR_ALERT']="Введите название устройства";
 	else if ($rec['ADDRESS']=='') $out['ERR_ALERT']="Введите адрес устройства";
@@ -52,7 +51,8 @@ if ($this->tab=='') {
 			$rec['FIRMWARE'] = $data['version']['release'];
 			$rec['NEW_FIRMWARE'] = $rec['FIRMWARE'];
 			$rec['SERIAL'] = $data['identification']['serial'];
-			if(!gr('reboot')) $rec['AUTO_REBOOT'] = 0;
+			$rec['AUTO_REBOOT'] = gr('reboot') ? gr('reboot') : 0;
+			$rec['REQ_PERIOD'] = gr('period') ? gr('period') : 5;
 			$rec['STATUS'] = 1;
 			$rec['INET_STATUS'] = $data['internet']['status']['internet'];
 			$rec['UPDATED'] = date('Y-m-d H:i:s');
@@ -85,17 +85,17 @@ if ($this->tab=='') {
 	 $inet['SCRIPT'] ='if(!$status){ //если интернет исчез;
 	
 }
-else if(!$status == 1){ //если интернет есть и активно основное подключение;
+else if($status == 1){ //если интернет есть и активно основное подключение;
 
 }
-else if(!$status > 1){ //если интернет есть и активно резервное подключение;
+else if($status > 1){ //если интернет есть и активно резервное подключение;
 
 }';
 	 $inet['UPDATED'] = date('Y-m-d H:i:s');
 	 SQLInsert('keenetic_devices', $inet);
     }
     $out['OK']=1;
-	setGlobal('cycle_keeneticControl','restart');
+	//setGlobal('cycle_keeneticControl','restart');
    } else {
     $out['ERR']=1;
    }

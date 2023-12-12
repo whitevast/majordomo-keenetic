@@ -34,6 +34,11 @@
 	 Пароль:
 	 </label>
 	 <div class="col-lg-6"><input class="form-control" id="password" name="password" value="[#PASSWORD#]" type="password" class="input"></div>
+	 <div class="clearfix hidden-xs hidden-sm"></div> 
+	 <label for="period" class="col-lg-6 control-label">
+	 Период опроса, секунд:
+	 </label>
+	 <div class="col-lg-6"><input class="form-control" id="period" name="period" value="[#if ID=""#]5[#else ID#][#REQ_PERIOD#][#endif ID#]" type="text" class="input"></div>
 	 <div class="clearfix hidden-xs hidden-sm"></div>  
 	 [#if ID!=""#]
 	 <label for="reboot" class="col-lg-6 control-label">

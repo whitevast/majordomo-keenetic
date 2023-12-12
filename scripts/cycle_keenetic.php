@@ -17,17 +17,18 @@ if (!$tmp['ID'])
    exit; // no devices added -- no need to run this cycle
 echo date("H:i:s") . " running " . basename(__FILE__) . PHP_EOL;
 $latest_check=0;
-if($keenetic_module->config['CYCLE_TIME'] != "") $checkEvery = $keenetic_module->config['CYCLE_TIME'];
-else $checkEvery = 5;
+$checkEvery = 1;
 $timeUpdate = 0;
 //Добавляем отсутствующие столбцы в таблицу
 $query = mysqli_fetch_all(SQLExec("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'keenetic_routers'"), MYSQLI_NUM);
-$mws = 1;
+$add = 1;
 foreach($query as $name) {
-	if($name[0] == 'MWS') $mws = 0;
+	if($name[0] == 'REQ_PERIOD') $add = 0;
 }
-if($mws) SQLExec("ALTER TABLE keenetic_routers ADD COLUMN MWS boolean NOT NULL DEFAULT 0 AFTER REGISTERED");
-//
+if($add){
+	SQLExec("ALTER TABLE `keenetic_routers` ADD `REQ_PERIOD` SMALLINT UNSIGNED NOT NULL DEFAULT '5' AFTER UPDATED");
+	SQLExec("ALTER TABLE `keenetic_routers` ADD `REQ_UPDATE` INT UNSIGNED NOT NULL DEFAULT '0' AFTER REQ_PERIOD");
+}
 while (1)
 {
    if(time() - $timeUpdate > 20){
