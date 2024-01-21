@@ -176,6 +176,20 @@ function admin(&$out) {
 function usual(&$out) {
  $this->admin($out);
 }
+
+
+function api($params) {
+    $id = $params['id'];
+    if ($this->isIP($id)) {
+        $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
+    } else {
+        $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.(int)$id.'"');
+    }
+    if (!isset($router['ID'])) return false;
+    $data = $this->getdata($router, $params['path'], $params['data']);
+    return $data;
+}
+
 /**
 * keenetic_routers search
 *
