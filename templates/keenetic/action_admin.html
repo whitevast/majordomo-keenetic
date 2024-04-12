@@ -1,20 +1,23 @@
 
 <!-- table zwave_devices search -->
 [#if VIEW_MODE="search_keenetic_routers" || VIEW_MODE=""#]
-<div>
-<a href="?view_mode=edit_keenetic_routers&data_source=<#DATA_SOURCE#>" class="btn btn-default"><i class="glyphicon glyphicon-plus"></i> <#LANG_ADD#></a>
-&nbsp;&nbsp;
- <!--# Кнопка 'Настройки'. #-->
-<a class="btn btn-default" href="#api_settings" data-toggle="collapse"><i class="glyphicon glyphicon-cog"></i></a>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;	
-	[#if CYCLERUN==1#]
-		<span class="label label-success" title="Статус цикла">Цикл запущен</span>
-	[#else#]
-		<span class="label label-danger" title="Статус цикла">Цикл остановлен</span>
-	[#endif#]
-	&nbsp;&nbsp;<img align="middle" src="../templates/keenetic/keenetic.svg" height="20">
-  <!--# Кнопка 'Справка'. #-->
-     <a href="?view_mode=show_help" class="btn btn-default btn-sm float-right" title="Справка"><i class="glyphicon glyphicon-question-sign"></i></a>
+<div class="row">
+	<div class="col-md-2">
+		<a href="?view_mode=edit_keenetic_routers&data_source=<#DATA_SOURCE#>" class="btn btn-default"><i class="glyphicon glyphicon-plus"></i><#LANG_ADD#></a>
+		&nbsp;&nbsp;
+		<!--# Кнопка 'Настройки'. #-->
+		<a class="btn btn-default" href="#api_settings" data-toggle="collapse"><i class="glyphicon glyphicon-cog"></i></a>
+	</div>
+	<div class="col-md-3">
+		<img align="middle" src="../templates/keenetic/keenetic.svg" height="22">
+	</div>
+	<div class="col-md-6">
+		[#module name="xray" action="service" cycle="keenetic"#]
+	</div>
+		<!--# Кнопка 'Справка'. #-->
+	<div class="col-md-1">
+		<a href="?view_mode=show_help" class="btn btn-default btn-sm float-right" title="Справка"><i class="glyphicon glyphicon-question-sign"></i></a>
+	</div>
 </div>
 [#else#]
 <a href="?view_mode=show_help" class="btn btn-default btn-sm float-right" title="Справка"><i class="glyphicon glyphicon-question-sign"></i></a>
@@ -73,9 +76,6 @@
   <li[#if TAB="dns"#] class="active"[#endif#]>
    <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab=dns">Управление DNS</a>
   </li>
-  <li[#if TAB="api"#] class="active"[#endif#]>
-    <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab=api">API</a>
-    </li>
 </ul>
 &nbsp;<br/>
    [#endif ID#]
@@ -87,9 +87,6 @@
    [#endif TAB#]
    [#if TAB="dns"#]
     [#inc keenetic_routers_edit_dns.html#]
-   [#endif TAB#]
-   [#if TAB="api"#]
-    [#inc keenetic_routers_edit_api.html#]
    [#endif TAB#]
  [#endif VIEW_MODE#]
  <!-- / table keenetic_routers edit -->

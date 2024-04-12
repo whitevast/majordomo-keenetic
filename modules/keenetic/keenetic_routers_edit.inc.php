@@ -105,23 +105,23 @@ else if($status > 1){ //если интернет есть и активно р�
   if ($this->tab=='data') {
    //dataset2
    $new_id=0;
-   global $wol_id;
+   $wol_id = gr('wol_id');
    if ($wol_id) {
     $device = SQLSelectOne('SELECT * FROM keenetic_devices WHERE ID="'.$wol_id.'"');
-    $this->wol($rec['ID'], $device['MAC']);
+    $this->wol($device['MAC']);
    }
-   global $register_id;
+   $register_id = gr('register_id');
    if ($register_id) {
     $device = SQLSelectOne('SELECT * FROM keenetic_devices WHERE ID="'.$register_id.'"');
 	$this->getdata($rec, 'known/host', '{"mac": "'.$device['MAC'].'", "name": "'.$device['TITLE'].'"}', 1);
    }
-   global $delete_id;
+   $delete_id = gr('delete_id');
    if ($delete_id) {
 	$device = SQLSelectOne('SELECT * FROM keenetic_devices WHERE ID="'.$delete_id.'"');
 	$this->getdata($rec, 'known/host', '{"mac": "'.$device['MAC'].'", "no": "true"}', 1);
     SQLExec("DELETE FROM keenetic_devices WHERE ID='".(int)$delete_id."'");
    }
-   global $sortby;
+   $sortby = gr('sortby');
    if ($sortby) $sort = $sortby;
    else $sort = "ID";
    $out['SORTBY'] = $sortby_keenetic_lan_devices;
@@ -161,7 +161,7 @@ else if($status > 1){ //если интернет есть и активно р�
   }
   //Настройка DNS
 if ($this->tab=='dns') {
-	global $delete_domain;
+	$delete_domain = gr('delete_domain');
 	if ($delete_domain) {
 		$this->getdata($rec, 'ip/host', '{"domain": "'.$delete_domain.'", "no": "true"}', 1);
 		$this->WriteLog('Из DNS удален домен: '.$delete_domain);

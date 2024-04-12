@@ -87,22 +87,21 @@
         <div style="width:900px">
 		  <p>В поле скрипта уже заложено тело скрипта, а именно условия для определения статуса устройства. Туда вы можете вносить любые действия.</p>
 		  <strong>Пример:</strong><br>
-			<i>if($status){ //если устройство появилось в сети <br>
-			&nbsp;$text = "в сети";<br>
-			}<br>
-			else{ //если устройство отключилось от сети<br>
-			&nbsp;$text = "не в сети";<br>
-			}<br>
-			say("Телефон ребенка " . $text, 1);</i><br><br>
+			<pre>if($status){ //если устройство появилось в сети
+ $text = "в сети";
+}
+else{ //если устройство отключилось от сети
+ $text = "не в сети";
+}
+say("Телефон ребенка " . $text, 1);</pre>
 			<p>В скрипте можно использовать массив <strong>$device</strong>, полученный от роутера.</p>
 			 <strong>Пример:</strong><br>
-			<i>if($status){ //если устройство появилось в сети <br>
-			&nbsp;$ip = $device['ip'];<br>
-			&nbsp;say('Устройство с адресом $ip в сети',1);<br>
-			}<br>
-			else{ //если устройство отключилось от сети<br>
-			}<br>
-			</i><br>
+			<pre>if($status){ //если устройство появилось в сети
+ $ip = $device['ip'];
+ say('Устройство с адресом $ip в сети',1);
+}
+else{ //если устройство отключилось от сети
+}</pre>
 			Как правило, когда устройство не в сети, большая часть параметров либо равна <strong>нулю</strong>, либо вообще <strong>отсутствует</strong>. Например, IP адрес обычно становится 0.0.0.0.
 		</div>
       </div>
@@ -176,29 +175,55 @@
       <div class="panel-body collapse" id="functions_help">
         <div style="width:900px">
 		  <p>На добавленном к модулю роутере можно выполнять <b>произвольные команды</b> с помощью следующего кода:</p>
-			<i>include_once(DIR_MODULES . "keenetic/keenetic.class.php");<br>
-			$keenetic_module = new keenetic();<br>
-			$keenetic_module->command('IP роутера', 'Команда', 1)<br>
-			</i><br>
+			<pre>include_once(DIR_MODULES . "keenetic/keenetic.class.php");
+$keenetic_module = new keenetic();
+$keenetic_module->command('IP роутера', 'Команда', 1);</pre>
 			<p>Третий параметр функции (по умолчанию - false) указывает, сохранять ли настройки. Это соответствует команде cli "system configuration save".</p>
 			<p>Функция возвращает ответ в виде ассоциативного массива</p>
 			<p>Команды отправляются в виде JSON объекта, содержащего команду, соответственно справочнику cli роутеров Keenetic. Например, команда "show ip hotspot" будет выглядеть следующим образом: "{"show": {"ip": {"hotspot": {}}}}"</p>
 			<p>Команды удобно тестировать в веб-интерфейсе Кинетика по адресу http://IP_роутера/a</p>
 			<br>
 			<p>Можно <b>перезагружать</b> роутер с помощью следующего кода:</p>
-			<i>include_once(DIR_MODULES . "keenetic/keenetic.class.php");<br>
-			$keenetic_module = new keenetic();<br>
-			$keenetic_module->reboot('IP роутера')<br>
-			</i><br>
+			<pre>include_once(DIR_MODULES . "keenetic/keenetic.class.php");
+$keenetic_module = new keenetic();
+$keenetic_module->reboot('IP роутера');</pre>
 			<p>Также можно <b>отправлять "магический" пакет</b> для включения устройств с помощью wake-on-lan:</p>
-			<i>include_once(DIR_MODULES . "keenetic/keenetic.class.php");<br>
-			$keenetic_module = new keenetic();<br>
-			$keenetic_module->wol('IP роутера', 'mac устройства')<br>
-			</i><br>
+			<pre>include_once(DIR_MODULES . "keenetic/keenetic.class.php");
+$keenetic_module = new keenetic();
+$keenetic_module->wol('имя/mac устройства');</pre>
+<p>Если подключено несколько роутеров и на них присутствуют устройства с одинаковыми именами, при указании <b>имени</b> в функции, пакет будет отправлен на <b>оба</b> устройства. Для разделения необходимо использовать MAC-адрес.</p>
 		</div>
       </div>
-   </div>
-      <div class="panel panel-info">
+	</div>
+	<div class="panel panel-info">
+      <div class="panel-heading">
+         <a data-toggle="collapse" data-parent="#accordion" href="#api_help">Обращение к роутеру по API с помощью кода</a>
+      </div>
+      <div class="panel-body collapse" id="api_help">
+        <div style="width:900px">
+			<p>
+				Параметры:
+				<ul>
+				<li>id &mdash; идентификатор роутера (можно использовать IP-адрес)</li>
+				<li>path &mdash; путь к исполняемой команде</li>
+				<li>data &mdash; дополнительные параметры команды (в формате JSON)</li>
+			</ul>
+			</p>
+			<p>В случае, если необходимо получить результат выполнения команды:</p>
+			<pre>include_once(DIR_MODULES.'keenetic/keenetic.class.php');
+$keenetic = new keenetic();
+$result = $keenetic->api(array('id'=>1,'path'=>'show/interface','data'=>''));</pre>
+			
+			<p>Если в обработке результата нет необходиомости, то можно использовать более короткую конструкцию:</p>
+			<pre>callAPI('/api/module/keenetic','GET',array('id'=>[#ID#],'path'=>'show/interface','data'=>''));</pre>
+			Пример перезагрузки роутера:
+			<pre>callAPI('/api/module/keenetic','GET',array('id'=>[#ID#],'path'=>'system/reboot','data'=>'{}'));</pre>
+			или
+			<pre>callAPI('/api/module/keenetic','GET',array('id'=>'[#ADDRESS#]','path'=>'system/reboot','data'=>'{}'));</pre>
+		</div>
+      </div>
+	</div>
+    <div class="panel panel-info">
       <div class="panel-heading">
          <a data-toggle="collapse" data-parent="#accordion" href="#dns_help">Управление DNS</a>
       </div>

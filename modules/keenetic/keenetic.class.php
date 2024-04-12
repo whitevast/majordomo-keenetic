@@ -98,10 +98,10 @@ function run() {
   } else {
    $this->usual($out);
   }
-  if (IsSet($this->owner->action)) {
+  if (isset($this->owner->action)) {
    $out['PARENT_ACTION']=$this->owner->action;
   }
-  if (IsSet($this->owner->name)) {
+  if (isset($this->owner->name)) {
    $out['PARENT_NAME']=$this->owner->name;
   }
   $out['VIEW_MODE']=$this->view_mode;
@@ -122,12 +122,11 @@ function run() {
 * @access public
 */
 function admin(&$out) {
- if ((time() - (int)gg('cycle_keeneticRun')) < 25 ) {
-	$out['CYCLERUN'] = 1;
- } else {
-	$out['CYCLERUN'] = 0;
- }
  $this->getConfig();
+  if (!isset($this->config['LOG_DEBMES'])){
+	$this->config['LOG_DEBMES']=0;
+	$this->saveConfig();
+ }
  $out['LOG_DEBMES']=$this->config['LOG_DEBMES'];
  if ($this->view_mode=='update_settings') {
    $this->config['LOG_DEBMES']=gr('log_debmes');
@@ -744,8 +743,10 @@ EOD;
 	}
 	$html = curl_exec($ch);
 	$http_code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE); // Получаем HTTP-код
+	//print_r($ip. ": ".$http_code);
+	//print PHP_EOL;
 	curl_close($ch);
-	//print_r($html);
+	//if($ip == 'apart.keenetic.pro') print_r($html);
 	if (!$html) return false;
 	if($http_code == 401){
 		$cookies = $this->auth($ip, $login, $password);
@@ -826,10 +827,16 @@ function reboot($id){
 	$this->getdata($router, 'system/reboot', '{}');
 }
 
-function wol($id, $mac){
-	if ($this->isIP($id)) $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
-	else $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$id.'"');
-	$this->getdata($router, 'ip/hotspot/wake', '{"mac": "'.$mac.'"}');
+function wol($mac){
+	$oktets = explode(':', $mac);
+	if(count($oktets) != 6) $devices = SQLSelect('SELECT * FROM keenetic_devices WHERE TITLE="'.$mac.'"'); //если это не mac-адрес
+	else $devices = SQLSelect('SELECT * FROM keenetic_devices WHERE MAC="'.$mac.'"');
+	if(count($devices) == 0) return false;
+	foreach($devices as $device){
+		$router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$device['ROUTER_ID'].'"');
+		$this->getdata($router, 'ip/hotspot/wake', '{"mac": "'.$device['MAC'].'"}');
+	}
+	return true;
 }
  
 function WriteLog($msg){
@@ -968,15 +975,15 @@ function seconds2times($seconds){
 
 function delete_object($name){
 	$obj=getObject($name);
-	if($obj){
+	if(isset($obj)){
 		include_once(DIR_MODULES . "objects/objects.class.php");
 		$objects_module = new objects();
 		$objects_module->delete_objects($obj->id);
 	}
 }
 function delete_class($name){
-	$class_id = SQLSelectOne("SELECT ID FROM classes WHERE TITLE='".$name."'"); // удялем класс
-	if($class_id){
+	$class_id = SQLSelectOne("SELECT ID FROM classes WHERE TITLE='".$name."'"); // удаляем класс
+	if(isset($class_id)){
 		include_once(DIR_MODULES . "classes/classes.class.php");
 		$classes_module = new classes();
 		$classes_module->delete_classes($class_id['ID']);
