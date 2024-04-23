@@ -7,7 +7,7 @@
   }
   $table_name='keenetic_routers';
   $rec=SQLSelectOne("SELECT * FROM $table_name WHERE ID='$id'");
-  if ($rec['FIRMWARE'] != $rec['NEW_FIRMWARE']){
+  if ($rec['STATUS'] and $rec['FIRMWARE'] != $rec['NEW_FIRMWARE']){
 	  $link = $this->getdata($rec,"webhelp/release-notes",'{"version": "'.$rec['NEW_FIRMWARE'].'", "locale": "ru"}');
 	  while(!isset($link['webhelp']['ru'][0]['href'])){
 		  usleep(300);
@@ -38,8 +38,8 @@ if ($this->tab=='') {
 	else $out['ERR_ALERT']="Введите пароль";
     $ok=0;
    }
-   if(getObject($rec['TITLE'])){
-	   $out['ERR_ALERT']="Объект с именем \"".$rec['TITLE']."\" уже существует в системе. Выберите другое имя.";
+   if(!isset($rec['ID']) and isset(SQLSelectOne("SELECT * FROM $table_name WHERE TITLE='".$rec['TITLE']."'")['ID'])){
+	   $out['ERR_ALERT']="Роутер с именем \"".$rec['TITLE']."\" уже существует в системе. Выберите другое имя.";
 	   $ok=0;
    }
     if($ok){

@@ -156,7 +156,6 @@ function admin(&$out) {
   $out['SET_DATASOURCE']=1;
  }
  if ($this->data_source=='keenetic_devices') {
-	 print 'keenetic_devices';
   if ($this->view_mode=='' || $this->view_mode=='search_keenetic_devices') {
    $this->search_keenetic_devices($out);
   }
@@ -367,7 +366,7 @@ function api($params) {
 	$routers = SQLSelect("SELECT * FROM keenetic_routers");
  	foreach($routers as $router){
 		//print_r($router);
-		if(time() - $router['REQ_UPDATE'] >= $router['REQ_PERIOD']){
+		if($router['REQ_PERIOD'] != 0 and time() - $router['REQ_UPDATE'] >= $router['REQ_PERIOD']){
 			$update_router = 0;
 			if($router['MWS']) $mws =  ', "mws": {"member": {}}';
 			else $mws = "";
@@ -385,7 +384,6 @@ function api($params) {
 				}
 				$components = explode(",", $getdata['show']['version']['ndw']['components']);
 				$mws = 0;
-				//print_r($components);
 				foreach($components as $name) {
 					if($name == 'mws') $mws = 1;
 				}
@@ -590,6 +588,7 @@ function api($params) {
 				unset($devmac);
 			}
 			if($update_router) $router['UPDATED'] = date('Y-m-d H:i:s');
+			unset($router['COOKIES']);
 			$router['REQ_UPDATE'] = time();
 			SQLUpdate('keenetic_routers', $router);
 		}
@@ -743,18 +742,15 @@ EOD;
 	}
 	$html = curl_exec($ch);
 	$http_code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE); // Получаем HTTP-код
-	//print_r($ip. ": ".$http_code);
-	//print PHP_EOL;
 	curl_close($ch);
-	//if($ip == 'apart.keenetic.pro') print_r($html);
 	if (!$html) return false;
-	if($http_code == 401){
+	if($http_code == 401 or $http_code == 403){
 		$cookies = $this->auth($ip, $login, $password);
 		if($cookies != -1 and $cookies != false){
 			$array = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$ip.'"');
 			$array['COOKIES'] = $cookies;
 			$array['UPDATED'] = date('Y-m-d H:i:s');
-			$array['ID'] = SQLUpdate('keenetic_routers', $array); //обновляем куки в базе
+			$result = SQLUpdate('keenetic_routers', $array); //обновляем куки в базе
 			$html = $this->getdata($array, $path, $data); //повторяем запрос
 			return $html;
 		} else {

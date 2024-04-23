@@ -15,13 +15,11 @@
 <div class="col-lg-6 form-group[#if ERR_TITLE#] has-error[#endif#]">
 	 <label for="title" class="col-lg-6 control-label">
 	 <#LANG_TITLE#>:
-	 (*)
 	 </label>
-	 <div class="col-lg-6"><input class="form-control" id="title" name="title" value="[#TITLE#]" type="text" class="input"></div>
+	 <div class="col-lg-6"><input class="form-control" id="title" name="title" value="[#TITLE#]" type="text" class="input" [#if ID!=""#]readonly[#endif ID#]></div>
 	 <div class="clearfix hidden-xs hidden-sm"></div>  
 	 <label for="address" class="col-lg-6 control-label">
 	 Адрес роутера:
-	 (*)
 	 </label>
 	 <div class="col-lg-6"><input class="form-control" id="address" name="address" value="[#ADDRESS#]" type="text" class="input"></div>
 	 <div class="clearfix hidden-xs hidden-sm"></div>  
