@@ -7,13 +7,15 @@
   }
   $table_name='keenetic_routers';
   $rec=SQLSelectOne("SELECT * FROM $table_name WHERE ID='$id'");
-  if ($rec['STATUS'] and $rec['FIRMWARE'] != $rec['NEW_FIRMWARE']){
-	  $link = $this->getdata($rec,"webhelp/release-notes",'{"version": "'.$rec['NEW_FIRMWARE'].'", "locale": "ru"}');
-	  while(!isset($link['webhelp']['ru'][0]['href'])){
-		  usleep(300);
-		  $link = $this->getdata($rec, "webhelp/release-notes");
-	  }
-	  $rec['HREF'] = $link['webhelp']['ru'][0]['href'];
+  if($rec){
+	if ($rec['STATUS'] and $rec['FIRMWARE'] != $rec['NEW_FIRMWARE']){
+		$link = $this->getdata($rec,"webhelp/release-notes",'{"version": "'.$rec['NEW_FIRMWARE'].'", "locale": "ru"}');
+		while(!isset($link['webhelp']['ru'][0]['href'])){
+			usleep(300);
+			$link = $this->getdata($rec, "webhelp/release-notes");
+		}
+		$rec['HREF'] = $link['webhelp']['ru'][0]['href'];
+	}
   }
 if ($this->tab=='') {
   if ($this->mode=='update') {
@@ -124,7 +126,7 @@ else if($status > 1){ //если интернет есть и активно р�
    $sortby = gr('sortby');
    if ($sortby) $sort = $sortby;
    else $sort = "ID";
-   $out['SORTBY'] = $sortby_keenetic_lan_devices;
+   //$out['SORTBY'] = $sortby_keenetic_lan_devices;
    $properties=SQLSelect("SELECT * FROM keenetic_devices WHERE ROUTER_ID='".$rec['ID']."' ORDER BY ".$sort);
    $total=count($properties);
    for($i=0;$i<$total;$i++) {

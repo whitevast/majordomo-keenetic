@@ -134,7 +134,7 @@ function admin(&$out) {
    setGlobal('cycle_keeneticControl','restart');
    $this->redirect("?");
  }
- if (isset($this->data_source) && !$_GET['data_source'] && !$_POST['data_source']) {
+ if (isset($this->data_source) && !isset($_GET['data_source']) && !isset($_POST['data_source'])) {
   $out['SET_DATASOURCE']=1;
  }
  if ($this->data_source=='keenetic_routers' || $this->data_source=='') {
@@ -142,7 +142,7 @@ function admin(&$out) {
    $this->search_keenetic_routers($out);
   }
   if ($this->view_mode=='edit_keenetic_routers') {
-   $this->edit_keenetic_routers($out, $this->id);
+   $this->edit_keenetic_routers($out, $this->id ?? '');
   }
   if ($this->view_mode=='delete_keenetic_routers') {
    $this->delete_keenetic_routers($this->id);
@@ -151,9 +151,6 @@ function admin(&$out) {
    if ($this->view_mode=='info_keenetic_devices') {
    $this->info_keenetic_devices($out, $this->id);
  }
- }
- if (isset($this->data_source) && !$_GET['data_source'] && !$_POST['data_source']) {
-  $out['SET_DATASOURCE']=1;
  }
  if ($this->data_source=='keenetic_devices') {
   if ($this->view_mode=='' || $this->view_mode=='search_keenetic_devices') {
@@ -275,6 +272,7 @@ function api($params) {
 	
 	$uptime = $this->seconds2times($uptime);
 	$times_values = array('',':',':','д.','год');
+	$rec['UPTIME'] = "";
 	for ($i = count($uptime)-1; $i >= 0; $i--){
 		if(strlen($uptime[$i]) == 1) $uptime[$i] = "0".$uptime[$i];
 		$rec['UPTIME'] = $rec['UPTIME'] . $uptime[$i] . $times_values[$i];
@@ -523,7 +521,7 @@ function api($params) {
 									if(!$device) continue;
 									$device = $device['show']['ip']['hotspot']['host']['0'];
 									//print_r($device);
-									if($device['link'] == "up"){
+									if(isset($device['link']) and $device['link'] == "up"){
 										unset($devmac[$value['MAC']]); //удаляем устройства из массива, иначе оно будет считаться не числящимся в БД
 										continue;
 									}
@@ -768,6 +766,7 @@ EOD;
  
 function auth($ip, $login, $password){
 	$prefix = "http://";
+	$cookies = "";
 	if(!$this->isIP($ip))$prefix = "https://";
 	$ch = curl_init($prefix.$ip.'/auth');
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
