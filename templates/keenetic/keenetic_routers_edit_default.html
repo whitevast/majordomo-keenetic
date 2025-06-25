@@ -46,6 +46,13 @@
 	 <div class="col-lg-6"><input class="form-control" id="reboot" name="reboot" value="[#AUTO_REBOOT#]" type="text" class="input">
 	  <div class="text-center">Cекунд. 0 - не перезагружать.</div>
 	 </div>
+	 <br>
+     <div class="col-lg-6 ">
+	  <label for="no_update" class="col-lg-6 control-label">
+		<span class='text' data-toggle="tooltip" title="НЕ проверять обновления прошивки">Не проверять обновления прошивки</span>
+		</label>
+		<input type="checkbox" name="no_update" value="1"[#if HREF_FW="1"#]checked[#endif#]> 
+	 </div>
 	 [#endif ID#]
 	 
 </div>
@@ -53,16 +60,16 @@
 [#if ID!=""#]
   <b>Модель:</b> [#MODEL#]<br>
   <b>Прошивка:</b> [#FIRMWARE#]<br>
-  [#if HREF!=""#]
-  <b><span class = "text-danger">Новая прошивка:</span></b> [#NEW_FIRMWARE#] <a href="[#HREF#]" target="_blank">Список изменений</a><br>
-  [#endif FIRMWARE#]
+  [#if UPDATE#]
+  <b><span class = "text-danger">Новая прошивка:</span></b> [#NEW_FIRMWARE#] [#if HREF_FW!=""#]<a href="[#HREF_FW#]" target="_blank">Список изменений</a>[#endif HREF_FW#]<br>
+  [#endif UPDATE#]
   <b>Серийный номер:</b> [#SERIAL#] <br>
   <b>Системный ID:</b> [#ID#] <br>
   <b>Статус:</b> [#if STATUS==1#]<span class="label label-success" title="Интернет есть">ONLINE</span>
 				[#else#]<span class="label label-danger" title="Интернета нет">OFFLINE</span>
 				[#endif STATUS#]<br>
   <b>Интернет:</b> [#if INET_STATUS==1#]<span class="label label-success" title="Устройство доступно">ONLINE</span>
-				[#else#]<span class="label label-danger" title="У)стройство недоступно">OFFLINE</span>
+				[#else#]<span class="label label-danger" title="Устройство недоступно">OFFLINE</span>
 				[#endif INET_STATUS#]<br>
 [#endif ID#]
 </div>

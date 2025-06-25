@@ -7,18 +7,10 @@
   }
   $table_name='keenetic_routers';
   $rec=SQLSelectOne("SELECT * FROM $table_name WHERE ID='$id'");
-  if($rec){
-	if ($rec['STATUS'] and $rec['FIRMWARE'] != $rec['NEW_FIRMWARE']){
-		$link = $this->getdata($rec,"webhelp/release-notes",'{"version": "'.$rec['NEW_FIRMWARE'].'", "locale": "ru"}');
-		while(!isset($link['webhelp']['ru'][0]['href'])){
-			usleep(300);
-			$link = $this->getdata($rec, "webhelp/release-notes");
-		}
-		$rec['HREF'] = $link['webhelp']['ru'][0]['href'];
-	}
-  }
-if ($this->tab=='') {
-  if ($this->mode=='update') {
+  $rec['PASSWORD'] = $this->dsCrypt($rec['PASSWORD'], true);
+  if ($this->tab=='') {
+	if ($rec['STATUS'] and $rec['FIRMWARE'] != $rec['NEW_FIRMWARE']) $rec['UPDATE'] = 1;
+   if ($this->mode=='update') {
    $ok=1;
   // step: default
    $rec['TITLE']=gr('title');
@@ -32,7 +24,9 @@ if ($this->tab=='') {
 	$rec['ADDRESS']=substr($rec['ADDRESS'], strpos($rec['ADDRESS'], "/")+1);
    }  
    $rec['LOGIN']=gr('login');
-   $rec['PASSWORD']=gr('password');
+   $rec['PASSWORD']=$this->dsCrypt(gr('password'));
+   if (gr('no_update') == 1) $rec['HREF_FW'] = 1;
+   else if ($rec['HREF_FW'] == 1) $rec['HREF_FW'] = "";
    if ($rec['TITLE']=='' or $rec['ADDRESS']=='' or $rec['LOGIN']=='' or $rec['PASSWORD']=='') {
     if($rec['TITLE']=='') $out['ERR_ALERT']="Введите название устройства";
 	else if ($rec['ADDRESS']=='') $out['ERR_ALERT']="Введите адрес устройства";
@@ -53,8 +47,8 @@ if ($this->tab=='') {
 			$rec['FIRMWARE'] = $data['version']['release'];
 			$rec['NEW_FIRMWARE'] = $rec['FIRMWARE'];
 			$rec['SERIAL'] = $data['identification']['serial'];
-			$rec['AUTO_REBOOT'] = gr('reboot') ? gr('reboot') : 0;
-			$rec['REQ_PERIOD'] = gr('period') ? gr('period') : 5;
+			$rec['AUTO_REBOOT'] = gr('reboot') ?? 0;
+			$rec['REQ_PERIOD'] = gr('period') ?? 5;
 			$rec['STATUS'] = 1;
 			$rec['INET_STATUS'] = $data['internet']['status']['internet'];
 			$rec['UPDATED'] = date('Y-m-d H:i:s');
@@ -71,8 +65,9 @@ if ($this->tab=='') {
 	}
   //UPDATING RECORD
    if ($ok) {
-    if ($rec['ID']) {
-	 if(isset($rec['HREF'])) unset($rec['HREF']);
+    if (isset($rec['ID'])) {
+	 //if(isset($rec['HREF_FW']) and $rec['HREF_FW'] !== 0) unset($rec['HREF_FW']);
+	 if(isset($rec['UPDATE'])) unset($rec['UPDATE']);
      SQLUpdate($table_name, $rec); // update
     } else {
      $new_rec=1;
@@ -97,10 +92,11 @@ else if($status > 1){ //если интернет есть и активно р�
 	 SQLInsert('keenetic_devices', $inet);
     }
     $out['OK']=1;
-	//setGlobal('cycle_keeneticControl','restart');
+	setGlobal('cycle_keeneticControl','restart');
    } else {
     $out['ERR']=1;
    }
+   $rec['PASSWORD'] = $this->dsCrypt($rec['PASSWORD'], true);
   }
 }
   // Вкладка устройств
@@ -205,4 +201,4 @@ if ($this->tab=='dns') {
    }
   }
   outHash($rec, $out);
- // print_r($out);
+  //print_r($out);

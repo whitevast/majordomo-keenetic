@@ -13,7 +13,7 @@ include_once(DIR_MODULES . 'keenetic/keenetic.class.php');
 $keenetic_module = new keenetic();
 $keenetic_module->getConfig();
 $tmp = SQLSelectOne("SELECT ID FROM keenetic_routers LIMIT 1");
-if (!$tmp['ID'])
+if (!isset($tmp['ID']))
    exit; // no devices added -- no need to run this cycle
 echo date("H:i:s") . " running " . basename(__FILE__) . PHP_EOL;
 $latest_check=0;
@@ -23,11 +23,10 @@ $timeUpdate = 0;
 $query = mysqli_fetch_all(SQLExec("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'keenetic_routers'"), MYSQLI_NUM);
 $add = 1;
 foreach($query as $name) {
-	if($name[0] == 'REQ_PERIOD') $add = 0;
+	if($name[0] == 'HREF_FW') $add = 0;
 }
 if($add){
-	SQLExec("ALTER TABLE `keenetic_routers` ADD `REQ_PERIOD` SMALLINT UNSIGNED NOT NULL DEFAULT '5' AFTER UPDATED");
-	SQLExec("ALTER TABLE `keenetic_routers` ADD `REQ_UPDATE` INT UNSIGNED NOT NULL DEFAULT '0' AFTER REQ_PERIOD");
+	SQLExec("ALTER TABLE `keenetic_routers` ADD `HREF_FW` TEXT NOT NULL DEFAULT '' AFTER NEW_FIRMWARE");
 }
 while (1)
 {

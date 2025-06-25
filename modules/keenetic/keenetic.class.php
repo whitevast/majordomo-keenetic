@@ -336,23 +336,34 @@ function api($params) {
 	 $this->getConfig();
 	 if($event == 'HOURLY'){
 		 $routers = SQLSelect("SELECT * FROM keenetic_routers");
-		 foreach($routers as $val){
-			 if($val['STATUS'] and $val['INET_STATUS']){
-				 $firmware = $this->getdata($val, 'components/list', "{}");
+		 foreach($routers as $router){
+			 if($router['HREF_FW'] == 1) continue;
+			 if($router['STATUS'] and $router['INET_STATUS']){
+				 $firmware = $this->getdata($router, 'components/list', "{}");
 				 //print_r($firmware['firmware']['version']);
 				 if(!isset($firmware['firmware']['version'])){
-					 setTimeOut('KeeneticWaitUpdate','include_once(DIR_MODULES . "keenetic/keenetic.class.php");
-													$keenetic_module = new keenetic();
-													$keenetic_module->processSubscription("HOURLY");'
-													,5);
+					if(!timeOutExists('KeeneticWaitUpdate'))
+						setTimeOut('KeeneticWaitUpdate',
+						'include_once(DIR_MODULES . "keenetic/keenetic.class.php");
+						$keenetic_module = new keenetic();
+						$keenetic_module->processSubscription("HOURLY");'
+						,10);
 					return;
 				 }
-				 if($firmware['firmware']['version'] != $val['NEW_FIRMWARE']){
-					$val['NEW_FIRMWARE'] = $firmware['firmware']['version'];
-					SQLUpdate('keenetic_routers', $val);
-					$this->WriteLog('Новая версия прошивки: '.$val['NEW_FIRMWARE']);
+				 if($firmware['firmware']['version'] != $router['NEW_FIRMWARE']){
+					$router['NEW_FIRMWARE'] = $firmware['firmware']['version'];
+					//Запрвшиваем ссылку на изменения в прошивке
+					$timeout = time() + 5; //Таймаут 5с
+					$link = $this->getdata($router,"webhelp/release-notes",'{"version": "'.$router['NEW_FIRMWARE'].'", "locale": "ru"}');
+					while(!isset($link['webhelp']['ru'][0]['href']) and $timeout > time()){
+						usleep(300);
+						$link = $this->getdata($router, "webhelp/release-notes");
+					}
+					$router['HREF_FW'] = $link['webhelp']['ru'][0]['href'] ?? "";
+					SQLUpdate('keenetic_routers', $router);
+					$this->WriteLog('Новая версия прошивки: '.$router['NEW_FIRMWARE']);
 					if(method_exists($this, 'sendnotification')) {
-						$this->sendnotification('Новая версия прошивки для '.$val['TITLE'].': '.$val['NEW_FIRMWARE'], 'danger');
+						$this->sendnotification('Новая версия прошивки для '.$router['TITLE'].': '.$router['NEW_FIRMWARE'], 'danger');
 					}
 				 }
 			 }
@@ -395,6 +406,7 @@ function api($params) {
 					if(method_exists($this, 'sendnotification')) {
 						$this->sendnotification('Прошивка на '.$router['TITLE'].' обновлена на версию '.$router['FIRMWARE'].'.', 'info');
 					}
+					$router['HREF_FW'] = '';
 					$update_router = 1;
 				}
 				$log = "";
@@ -574,11 +586,11 @@ function api($params) {
 					else $new['TYPE_CONNECT'] = 0;
 					$new['ROUTER_ID'] = $router['ID'];
 					$new['SCRIPT'] ='if($status){ //если устройство появилось в сети;
-		
-	}
-	else{ //если устройство отключилось от сети;
-		
-	}';
+	
+}
+else{ //если устройство отключилось от сети;
+	
+}';
 					$new['UPDATED'] = date('Y-m-d H:i:s');
 					SQLInsert('keenetic_devices', $new);
 					$this->WriteLog("Устройство ".$new['TITLE'].", MAC: ".$new['MAC']." добавлено на ".$router['TITLE'].".");
@@ -594,11 +606,11 @@ function api($params) {
  }
  
  //Запись в привязанное свойство/метод
- function setProperty($device, $value, $params = ''){
-    if ($device['LINKED_OBJECT'] && $device['LINKED_PROPERTY']) {
-		setGlobal($device['LINKED_OBJECT'] . '.' . $device['LINKED_PROPERTY'], $value, 0, 'keenetic_module');
+ function setProperty($device, $value, $params = []){
+    if (isset($device['LINKED_OBJECT']) && isset($device['LINKED_PROPERTY'])) {
+		setGlobal($device['LINKED_OBJECT'] . '.' . $device['LINKED_PROPERTY'], $value, array($this->name=>1), $this->name);
     }
-	if ($device['LINKED_OBJECT'] && $device['LINKED_METHOD']) {
+	if (isset($device['LINKED_OBJECT']) && isset($device['LINKED_METHOD'])) {
 		$params['VALUE'] = $value;
 		callMethodSafe($device['LINKED_OBJECT'] . '.' . $device['LINKED_METHOD'], $params);
     }
@@ -690,6 +702,7 @@ keenetic_devices -
  keenetic_routers: COOKIES varchar(100) NULL DEFAULT ''
  keenetic_routers: FIRMWARE varchar(20) NOT NULL DEFAULT ''
  keenetic_routers: NEW_FIRMWARE varchar(20) NOT NULL DEFAULT ''
+ keenetic_routers: HREF_FW text NOT NULL DEFAULT ''
  keenetic_routers: SERIAL varchar(20) NOT NULL DEFAULT ''
  keenetic_routers: MWS boolean NOT NULL DEFAULT 0
  keenetic_routers: STATUS boolean NOT NULL DEFAULT 0
@@ -767,6 +780,7 @@ EOD;
 function auth($ip, $login, $password){
 	$prefix = "http://";
 	$cookies = "";
+	$password = $this->dsCrypt($password, true);
 	if(!$this->isIP($ip))$prefix = "https://";
 	$ch = curl_init($prefix.$ip.'/auth');
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -919,7 +933,7 @@ function backupWAN($interface){
 				$array['STATE'] = 1;
 				$array['NAME'] = $siface[$i]['description'];
 				$array['UPTIME'] = $siface[$i]['uptime'];
-				$array['IP'] = isset($siface[$i]['address']) ? $siface[$i]['address'] : "";
+				$array['IP'] = isset($siface[$i]['address']) ?? "";
 				$array['WAN'] = $i;
 				break;
 			}
@@ -967,6 +981,59 @@ function seconds2times($seconds){
 	$times[0] = $seconds;
 	return $times;
 }
+/*Обратимое шифрование методом "Двойного квадрата" (Reversible crypting of "Double square" method)
+* @param  String $input   Строка с исходным текстом
+* @param  bool   $decrypt Флаг для дешифрования
+* @return String          Строка с результатом Шифрования|Дешифрования
+* @author runcore*/
+
+function dsCrypt($input,$decrypt=false) {
+    $o = $s1 = $s2 = array(); // Arrays for: Output, Square1, Square2
+    // формируем базовый массив с набором символов
+    $basea = array('?','(','@',';','$','#',"]","&",'*'); // base symbol set
+    $basea = array_merge($basea, range('a','z'), range('A','Z'), range(0,9) );
+    $basea = array_merge($basea, array('!',')','_','+','|','%','/','[','.',' ') );
+    $dimension=9; // of squares
+    for($i=0;$i<$dimension;$i++) { // create Squares
+        for($j=0;$j<$dimension;$j++) {
+            $s1[$i][$j] = $basea[$i*$dimension+$j];
+            $s2[$i][$j] = str_rot13($basea[($dimension*$dimension-1) - ($i*$dimension+$j)]);
+        }
+    }
+    unset($basea);
+    $m = floor(strlen($input)/2)*2; // !strlen%2
+    $symbl = $m==strlen($input) ? '':$input[strlen($input)-1]; // last symbol (unpaired)
+    $al = array();
+    // crypt/uncrypt pairs of symbols
+    for ($ii=0; $ii<$m; $ii+=2) {
+        $symb1 = $symbn1 = strval($input[$ii]);
+        $symb2 = $symbn2 = strval($input[$ii+1]);
+        $a1 = $a2 = array();
+        for($i=0;$i<$dimension;$i++) { // search symbols in Squares
+            for($j=0;$j<$dimension;$j++) {
+                if ($decrypt) {
+                    if ($symb1===strval($s2[$i][$j]) ) $a1=array($i,$j);
+                    if ($symb2===strval($s1[$i][$j]) ) $a2=array($i,$j);
+                    if (!empty($symbl) && $symbl===strval($s2[$i][$j])) $al=array($i,$j);
+                }
+                else {
+                    if ($symb1===strval($s1[$i][$j]) ) $a1=array($i,$j);
+                    if ($symb2===strval($s2[$i][$j]) ) $a2=array($i,$j);
+                    if (!empty($symbl) && $symbl===strval($s1[$i][$j])) $al=array($i,$j);
+                }
+            }
+        }
+        if (sizeof($a1) && sizeof($a2)) {
+            $symbn1 = $decrypt ? $s1[$a1[0]][$a2[1]] : $s2[$a1[0]][$a2[1]];
+            $symbn2 = $decrypt ? $s2[$a2[0]][$a1[1]] : $s1[$a2[0]][$a1[1]];
+        }
+        $o[] = $symbn1.$symbn2;
+    }
+    if (!empty($symbl) && sizeof($al)) // last symbol
+        $o[] = $decrypt ? $s1[$al[1]][$al[0]] : $s2[$al[1]][$al[0]];
+    return implode('',$o);
+}
+
 
 function delete_object($name){
 	$obj=getObject($name);

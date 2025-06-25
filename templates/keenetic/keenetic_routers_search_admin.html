@@ -40,19 +40,31 @@
  <td>[#TITLE#]</td>
  <td><a href="http://[#ADDRESS#]" target="_blank">[#ADDRESS#]</a></td>
  <td>[#MODEL#]</td>
- <td>[#if UPDATE!=""#]<span class="label label-danger" title="Есть обновление">[#FIRMWARE#]</span>[#else#][#FIRMWARE#][#endif#]</td>
+ <td>[#if UPDATE!=""#]
+		[#if HREF_FW!=""#]
+			<a href="[#HREF_FW#]" target="_blank"><span class="label label-danger" title="Есть обновление [#NEW_FIRMWARE#]">[#FIRMWARE#]</span></a>
+		[#else HREF_FW#]
+			<span class="label label-danger" title="Есть обновление [#NEW_FIRMWARE#]">[#FIRMWARE#]</span>
+		[#endif HREF_FW#]
+	[#else UPDATE#][#FIRMWARE#]
+	[#endif UPDATE#]</td>
  <td>[#REQ_PERIOD#]</td>
- <td>[#if STATUS==1#]<span class="label label-success" title="Устройство доступно">ONLINE</span>
-	[#else#]<span class="label label-danger" title="Устройство недоступно">OFFLINE</span>
+ <td>[#if STATUS==1#]
+		<span class="label label-success" title="Устройство доступно">ONLINE</span>
+	[#else#]
+		<span class="label label-danger" title="Устройство недоступно">OFFLINE</span>
 	[#endif STATUS#]</td>
- <td>[#if INET_STATUS==1#]<span class="label label-success" title="Интернет есть">ONLINE</span>
-	[#else#]<span class="label label-danger" title="Интернета нет">OFFLINE</span>
+ <td>[#if INET_STATUS==1#]
+		<span class="label label-success" title="Интернет есть">ONLINE</span>
+	[#else#]
+		<span class="label label-danger" title="Интернета нет">OFFLINE</span>
 	[#endif INET_STATUS#]</td>
  <td width="1%" nowrap>
   <div>
   [#if "<#ACTION#>"=="admin"#]
-   <a href="?data_source=<#DATA_SOURCE#>&view_mode=edit_keenetic_routers&id=[#ID#]" class="btn btn-default" title="Edit"><i class="glyphicon glyphicon-pencil"></i></a>
-    <a href="?data_source=<#DATA_SOURCE#>&view_mode=delete_keenetic_routers&id=[#ID#]" onClick="return confirm('Are you sure? Please confirm.')" class="btn btn-default" title="Delete"><i class="glyphicon glyphicon-remove"></i></a>
+   <a href="?data_source=<#DATA_SOURCE#>&view_mode=edit_keenetic_routers&id=[#ID#]" class="btn btn-default" title="Правка"><i class="glyphicon glyphicon-pencil"></i></a>
+   <a href="?data_source=<#DATA_SOURCE#>&view_mode=edit_keenetic_routers&id=[#ID#]&tab=data" class="btn btn-default" title="Устройства"><i class="glyphicon glyphicon-th-list"></i></a>
+   <a href="?data_source=<#DATA_SOURCE#>&view_mode=delete_keenetic_routers&id=[#ID#]" onClick="return confirm('Are you sure? Please confirm.')" class="btn btn-default" title="Удалить"><i class="glyphicon glyphicon-remove"></i></a>
   [#endif ACTION#]
   </div>
  </td>
