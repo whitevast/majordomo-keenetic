@@ -37,7 +37,7 @@
 <tbody>
 [#begin RESULT#]
 <tr>
- <td>[#TITLE#]</td>
+ <td><a href="?data_source=<#DATA_SOURCE#>&view_mode=edit_keenetic_routers&id=[#ID#]">[#TITLE#]</a></td>
  <td><a href="http://[#ADDRESS#]" target="_blank">[#ADDRESS#]</a></td>
  <td>[#MODEL#]</td>
  <td>[#if UPDATE!=""#]
@@ -46,6 +46,7 @@
 		[#else HREF_FW#]
 			<span class="label label-danger" title="Есть обновление [#NEW_FIRMWARE#]">[#FIRMWARE#]</span>
 		[#endif HREF_FW#]
+		   <a href="?data_source=<#DATA_SOURCE#>&view_mode=update_firmware&id=[#ID#]" onClick="return confirm('Вы уверены, что хотите обновить KeeneticOS?')" class="btn btn-sm" title="Обновить прошивку"><i class="glyphicon glyphicon-repeat"></i></a>
 	[#else UPDATE#][#FIRMWARE#]
 	[#endif UPDATE#]</td>
  <td>[#REQ_PERIOD#]</td>

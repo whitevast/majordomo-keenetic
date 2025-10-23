@@ -141,6 +141,10 @@ function admin(&$out) {
   if ($this->view_mode=='' || $this->view_mode=='search_keenetic_routers') {
    $this->search_keenetic_routers($out);
   }
+  if ($this->view_mode=='update_firmware') {
+   $this->firmwareUpdate($this->id);
+   $this->redirect("?data_source=keenetic_routers");
+  }
   if ($this->view_mode=='edit_keenetic_routers') {
    $this->edit_keenetic_routers($out, $this->id ?? '');
   }
@@ -150,12 +154,9 @@ function admin(&$out) {
   }
    if ($this->view_mode=='info_keenetic_devices') {
    $this->info_keenetic_devices($out, $this->id);
- }
+  }
  }
  if ($this->data_source=='keenetic_devices') {
-  if ($this->view_mode=='' || $this->view_mode=='search_keenetic_devices') {
-   $this->search_keenetic_devices($out);
-  }
   if ($this->view_mode=='edit_keenetic_devices') {
    $this->edit_keenetic_devices($out, $this->id);
   }
@@ -169,6 +170,8 @@ function admin(&$out) {
 * @access public
 */
 function usual(&$out) {
+	//print_r($this);
+	print(gr('mobile'));
  $this->admin($out);
 }
 
@@ -306,14 +309,6 @@ function api($params) {
   SQLExec("DELETE FROM keenetic_devices WHERE ROUTER_ID='".$rec['ID']."'");
  }
 /**
-* keenetic_devices search
-*
-* @access public
-*/
- function search_keenetic_devices(&$out) {
-  require(dirname(__FILE__).'/keenetic_devices_search.inc.php');
- }
-/**
 * keenetic_devices edit/add
 *
 * @access public
@@ -348,12 +343,12 @@ function api($params) {
 						$keenetic_module = new keenetic();
 						$keenetic_module->processSubscription("HOURLY");'
 						,10);
-					return;
+					continue;
 				 }
 				 if($firmware['firmware']['version'] != $router['NEW_FIRMWARE']){
 					$router['NEW_FIRMWARE'] = $firmware['firmware']['version'];
 					//Запрвшиваем ссылку на изменения в прошивке
-					$timeout = time() + 5; //Таймаут 5с
+					$timeout = time() + 10; //Таймаут 10с
 					$link = $this->getdata($router,"webhelp/release-notes",'{"version": "'.$router['NEW_FIRMWARE'].'", "locale": "ru"}');
 					while(!isset($link['webhelp']['ru'][0]['href']) and $timeout > time()){
 						usleep(300);
@@ -607,10 +602,10 @@ else{ //если устройство отключилось от сети;
  
  //Запись в привязанное свойство/метод
  function setProperty($device, $value, $params = []){
-    if (isset($device['LINKED_OBJECT']) && isset($device['LINKED_PROPERTY'])) {
+    if (!empty($device['LINKED_OBJECT']) && !empty($device['LINKED_PROPERTY'])) {
 		setGlobal($device['LINKED_OBJECT'] . '.' . $device['LINKED_PROPERTY'], $value, array($this->name=>1), $this->name);
     }
-	if (isset($device['LINKED_OBJECT']) && isset($device['LINKED_METHOD'])) {
+	if (!empty($device['LINKED_OBJECT']) && !empty($device['LINKED_METHOD'])) {
 		$params['VALUE'] = $value;
 		callMethodSafe($device['LINKED_OBJECT'] . '.' . $device['LINKED_METHOD'], $params);
     }
@@ -834,6 +829,12 @@ function reboot($id){
 	if ($this->isIP($id)) $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
 	else $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$id.'"');
 	$this->getdata($router, 'system/reboot', '{}');
+}
+
+function firmwareUpdate($id){
+	if ($this->isIP($id)) $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
+	else $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$id.'"');
+	$this->getdata($router, 'components/commit', '{}');
 }
 
 function wol($mac){
