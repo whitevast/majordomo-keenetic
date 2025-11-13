@@ -47,8 +47,8 @@
 			$rec['FIRMWARE'] = $data['version']['release'];
 			$rec['NEW_FIRMWARE'] = $rec['FIRMWARE'];
 			$rec['SERIAL'] = $data['identification']['serial'];
-			$rec['AUTO_REBOOT'] = gr('reboot') ?? 0;
-			$rec['REQ_PERIOD'] = gr('period') ?? 5;
+			$rec['AUTO_REBOOT'] = !empty(gr('reboot')) ? gr('reboot') : 0;
+			$rec['REQ_PERIOD'] = !empty(gr('period')) ? gr('period') : 5;
 			$rec['STATUS'] = 1;
 			$rec['INET_STATUS'] = $data['internet']['status']['internet'];
 			$rec['UPDATED'] = date('Y-m-d H:i:s');
