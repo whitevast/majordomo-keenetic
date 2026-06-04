@@ -1,5 +1,3 @@
-
-<!-- table zwave_devices search -->
 [#if VIEW_MODE="search_keenetic_routers" || VIEW_MODE=""#]
 <div class="row">
 	<div class="col-md-2">
@@ -73,6 +71,9 @@
   <li[#if TAB="data"#] class="active"[#endif#]>
    <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab=data">Устройства</a>
   </li>
+   <li[#if TAB="cnct"#] class="active"[#endif#]>
+   <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab=cnct">Подключения</a>
+  </li>
   <li[#if TAB="dns"#] class="active"[#endif#]>
    <a href="?data_source=<#DATA_SOURCE#>&view_mode=<#VIEW_MODE#>&id=<#ID#>&tab=dns">Управление DNS</a>
   </li>
@@ -84,6 +85,9 @@
    [#endif TAB#]
    [#if TAB="data"#]
     [#inc keenetic_routers_edit_data.html#]
+   [#endif TAB#]
+   [#if TAB="cnct"#]
+    [#inc keenetic_routers_edit_cnct.html#]
    [#endif TAB#]
    [#if TAB="dns"#]
     [#inc keenetic_routers_edit_dns.html#]

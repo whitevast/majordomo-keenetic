@@ -33,19 +33,19 @@ function __construct() {
 */
 function saveParams($data=1) {
  $p=array();
- if (IsSet($this->id)) {
+ if (isset($this->id)) {
   $p["id"]=$this->id;
  }
- if (IsSet($this->view_mode)) {
+ if (isset($this->view_mode)) {
   $p["view_mode"]=$this->view_mode;
  }
- if (IsSet($this->edit_mode)) {
+ if (isset($this->edit_mode)) {
   $p["edit_mode"]=$this->edit_mode;
  }
- if (IsSet($this->data_source)) {
+ if (isset($this->data_source)) {
   $p["data_source"]=$this->data_source;
  }
- if (IsSet($this->tab)) {
+ if (isset($this->tab)) {
   $p["tab"]=$this->tab;
  }
  return parent::saveParams($p);
@@ -152,11 +152,11 @@ function admin(&$out) {
    $this->delete_keenetic_routers($this->id);
    $this->redirect("?data_source=keenetic_routers");
   }
-   if ($this->view_mode=='info_keenetic_devices') {
+  if ($this->view_mode=='info_keenetic_devices') {
    $this->info_keenetic_devices($out, $this->id);
   }
  }
- if ($this->data_source=='keenetic_devices') {
+ if ($this->data_source=='delete_keenetic_routers') {
   if ($this->view_mode=='edit_keenetic_devices') {
    $this->edit_keenetic_devices($out, $this->id);
   }
@@ -270,7 +270,7 @@ function api($params) {
 		unset($rec['UPTIME']);
 		$rec['RXBYTES'] = round($rec['RXBYTES']/1024/1024, 1);
 		$rec['TXBYTES'] = round($rec['TXBYTES']/1024/1024, 1);
-		if($rec['ROUTER']) $rec['ROUTER'] = $rec['ROUTER'].' '.$rec['FREQ'].' ('.$rec['NET'].')';
+		if(isset($rec['ROUTER'])) $rec['ROUTER'] = $rec['ROUTER'].' '.$rec['FREQ'].' ('.$rec['NET'].')';
 	}
 	
 	$uptime = $this->seconds2times($uptime);
@@ -293,6 +293,7 @@ function api($params) {
 	$out['LOG']=nl2br($rec['LOG']);
 	//print_r($out);
 }
+
 /**
 * keenetic_routers delete record
 *
@@ -302,28 +303,30 @@ function api($params) {
   $rec=SQLSelectOne("SELECT * FROM keenetic_routers WHERE ID='$id'");
   $this->delete_class($rec['TITLE']); //удаляем класс
   SQLExec("DELETE FROM keenetic_routers WHERE ID='".$rec['ID']."'");
-  $properties=SQLSelect("SELECT * FROM keenetic_devices WHERE ROUTER_ID='".$rec['ID']."' AND LINKED_OBJECT != '' AND LINKED_PROPERTY != ''");
+  $properties = SQLSelect("SELECT * FROM keenetic_devices WHERE ROUTER_ID='".$rec['ID']."' AND LINKED_OBJECT != '' AND LINKED_PROPERTY != ''");
     foreach($properties as $prop) {
 		removeLinkedProperty($prop['LINKED_OBJECT'], $prop['LINKED_PROPERTY'], $this->name);
 	}
   SQLExec("DELETE FROM keenetic_devices WHERE ROUTER_ID='".$rec['ID']."'");
+	$connections = SQLSelect("SELECT * FROM keenetic_connections WHERE ROUTER_ID='".$rec['ID']."' AND LINKED_OBJECT != '' AND LINKED_PROPERTY != ''");
+	foreach($connectioms as $connection) {
+		removeLinkedProperty($connection['LINKED_OBJECT'], $connection['LINKED_PROPERTY'], $this->name);
+	}
+  SQLExec("DELETE FROM keenetic_connections WHERE ROUTER_ID='".$rec['ID']."'");
  }
 /**
 * keenetic_devices edit/add
 *
 * @access public
 */
- function edit_keenetic_devices(&$out, $id) {
-  require(dirname(__FILE__).'/keenetic_devices_edit.inc.php');
- }
  function propertySetHandle($object, $property, $value) {
   $this->getConfig();
-   $table='keenetic_devices';
+   $table='keenetic_connections';
    $properties=SQLSelect("SELECT ID FROM $table WHERE LINKED_OBJECT LIKE '".DBSafe($object)."' AND LINKED_PROPERTY LIKE '".DBSafe($property)."'");
    $total=count($properties);
    if ($total) {
     for($i=0;$i<$total;$i++) {
-     //to-do
+     $this->changeConnection($properties[$i]['ID'], $value);
     }
    }
  }
@@ -369,7 +372,6 @@ function api($params) {
  //$this->getConfig();
 	$routers = SQLSelect("SELECT * FROM keenetic_routers");
  	foreach($routers as $router){
-		//print_r($router);
 		if($router['REQ_PERIOD'] != 0 and time() - $router['REQ_UPDATE'] >= $router['REQ_PERIOD']){
 			$update_router = 0;
 			if($router['MWS']) $mws =  ', "mws": {"member": {}}';
@@ -452,7 +454,7 @@ function api($params) {
 				}
 				if($update){
 					$inet['LOG'] = date('Y-m-d H:i:s')." Соединение с интернетом ".$log."\n".$inet['LOG'];
-						if(substr_count($inet['LOG'], "\n") > 30){ //очищаем самые давние события, если их более 30
+						while(substr_count($inet['LOG'], "\n") > 30){ //очищаем самые давние события, если их более 30
 							$inet['LOG'] = substr($inet['LOG'], 0, strrpos(trim($inet['LOG']), "\n"));
 						}
 					$this->WriteLog("Соединение с интернетом ".$log);
@@ -473,6 +475,72 @@ function api($params) {
 						}
 						else eval($code);
 				}
+				//Соединения
+				$connectionindb = SQLSelect("SELECT * FROM keenetic_connections WHERE ROUTER_ID='".$router['ID']."'");
+				$connections = [];
+				$update = 0;
+				foreach($getdata['show']['interface'] as $connection){
+					if(!in_array($connection['type'], ["GigabitEthernet", "FastEthernet", "Port", "Vlan", "AccessPoint", "WifiMaster", "WifiStation", "Bridge"])){
+						$connections[$connection['id']] = $connection;
+					}
+				}
+				//dprint($connections,0);
+				foreach($connectionindb as $connection){
+					if(isset($connections[$connection['CONN_ID']])){
+						$connid = $connection['CONN_ID'];
+						if($connection['TITLE'] != $connections[$connid]['description']){
+							$connection['TITLE'] = $connections[$connid]['description'] ?? '';
+							$update = 1;
+						}
+						if(isset($connections[$connid]['address']) and $connection['ADDRESS'] != $connections[$connid]['address']){
+							$connection['ADDRESS'] = $connections[$connid]['address'] ?? '';
+							$update = 1;
+						}
+						if($connection['TYPE'] != $connections[$connid]['type']){
+							$connection['TYPE'] = $connections[$connid]['type'];
+							$update = 1;
+						}
+						$state = $connections[$connid]['connected'] == "yes" ? 1 : 0;
+						if($connection['STATUS'] != $state){
+							$connection['STATUS'] = $state;
+							$this->setProperty($connection, $state); //обновляем свойство
+							$name = $connection['TITLE'];
+							$code = $router['CNCT_SCRIPT'];
+							$errors = php_syntax_error($code);
+							if ($errors){
+								$line = preg_replace('/[^0-9]/', '', substr(stristr($errors, 'php on line '), 0, 18));
+								$errorStr = explode('Parse error: ', htmlspecialchars(strip_tags(nl2br($errors))));
+								$errorStr = explode('Errors parsing', $errorStr[1]);
+								$errorStr = explode(' in ', $errorStr[0]);
+								$errors = $errorStr[0].' on line '.$line;
+								$this->WriteLog("Ошибка в коде: ".$code);
+								registerError('Keenetic', "Error in code: " . $code. PHP_EOL . PHP_EOL . $errors . PHP_EOL);
+							}
+							else eval($code);
+							$update = 1;
+						}
+						if($update){
+							$connection['UPDATED'] = date('Y-m-d H:i:s');
+							SQLUpdate('keenetic_connections', $connection);
+						}
+						unset($connections[$connid]);
+					}
+				}
+				//Добавим новые соединения в базу
+				if(!empty($connections)){
+					foreach($connections as $connection){
+						$newconn['ROUTER_ID'] = $router['ID'];
+						$newconn['CONN_ID'] = $connection['id'];
+						$newconn['TITLE'] = $connection['description'] ?? '';
+						$newconn['ADDRESS'] = $connection['address'] ?? '';
+						$newconn['TYPE'] = $connection['type'] ?? '';
+						$newconn['STATUS'] = $connection['connected'] == "yes" ? 1 : 0;
+						$newconn['UPDATED'] = date('Y-m-d H:i:s');
+						SQLInsert('keenetic_connections', $newconn);
+					}
+				}
+				
+				
 				//Предобработка списка устройств
 				$devices = $getdata['show']['ip']['hotspot']['host'];
 				if(!is_array($devices)) {
@@ -485,7 +553,7 @@ function api($params) {
 					else if($valuedev['link'] == "down") $valuedev['link'] = 0;
 					if($valuedev['ip'] == "0.0.0.0") $valuedev['link'] = 0;
 					$devmac[$valuedev['mac']] = $valuedev;
-				}
+				}				
 				//Проверка изменений
 				$devicesindb = SQLSelect("SELECT ID, ROUTER_ID, TITLE, MAC, IP, STATUS, TYPE_CONNECT, REGISTERED, TRACK, SCRIPT, LINKED_OBJECT, LINKED_PROPERTY, LINKED_METHOD, UPDATED FROM keenetic_devices WHERE ROUTER_ID='".$router['ID']."'");
 				foreach ($devicesindb as $value){ //Если устройство из БД есть в устройствах, отданных роутером
@@ -527,7 +595,6 @@ function api($params) {
 									$device = $this->getdata($router, '', '{"show":{"ip":{"hotspot":{"mac":"'.$value['MAC'].'"}}}}');
 									if(!$device) continue;
 									$device = $device['show']['ip']['hotspot']['host']['0'];
-									//print_r($device);
 									if(isset($device['link']) and $device['link'] == "up"){
 										unset($devmac[$value['MAC']]); //удаляем устройства из массива, иначе оно будет считаться не числящимся в БД
 										continue;
@@ -615,15 +682,21 @@ else{ //если устройство отключилось от сети;
  function findData($data) {
     $res = array();
 	//Keenetic routers
-    $routers = SQLSelect("SELECT ID, TITLE, MODEL FROM keenetic_routers where `TITLE` like '%" . DBSafe($data) . "%' OR `MODEL` like '%" . DBSafe($data) . "%' OR `ADDRESS` like '%" . DBSafe($data) . "%'  order by TITLE");
+    $routers = SQLSelect("SELECT ID, TITLE, MODEL FROM keenetic_routers WHERE `TITLE` like '%" . DBSafe($data) . "%' OR `MODEL` like '%" . DBSafe($data) . "%' OR `ADDRESS` like '%" . DBSafe($data) . "%'  order by TITLE");
 	foreach($routers as $router){
          $res[]= '&nbsp;<span class="label label-info">routers</span>&nbsp;<a href="/panel/keenetic.html?md=keenetic&inst=adm&view_mode=edit_keenetic_routers&id=' . $router['ID'] . '.html">' . $router['TITLE'].($router['MODEL'] ? '<small style="color: gray;padding-left: 5px;"><i class="glyphicon glyphicon-arrow-right" style="font-size: .8rem;vertical-align: text-top;color: lightgray;"></i> ' . $router['MODEL'] . '</small>' : ''). '</a>';
     }
-      //Keenetic devices
-    $devices = SQLSelect("SELECT ID, TITLE, IP, ROUTER_ID FROM keenetic_devices where `TITLE` like '%" . DBSafe($data) . "%' OR `MAC` like '%" . DBSafe($data) . "%' OR `IP` like '%" . DBSafe($data) . "%'  order by TITLE");
+    //Keenetic devices
+    $devices = SQLSelect("SELECT ID, TITLE, IP, ROUTER_ID FROM keenetic_devices WHERE `TITLE` like '%" . DBSafe($data) . "%' OR `MAC` like '%" . DBSafe($data) . "%' OR `IP` like '%" . DBSafe($data) . "%'  order by TITLE");
     foreach($devices as $device){
 		$routr = SQLSelectOne('SELECT TITLE FROM keenetic_routers WHERE ID="'.$device['ROUTER_ID'].'"');
 		$res[]= '&nbsp;<span class="label label-info">'.$routr['TITLE'].'</span>&nbsp;<span class="label label-primary">devices</span>&nbsp;<a href="/panel/keenetic.html?md=keenetic&inst=adm&view_mode=info_keenetic_devices&id=' . $device['ID'] . '.html">' . $device['TITLE']. ($device['IP'] ? '<small style="color: gray;padding-left: 5px;"><i class="glyphicon glyphicon-arrow-right" style="font-size: .8rem;vertical-align: text-top;color: lightgray;"></i> ' . $device['IP'] . '</small>' : '').'</a>';
+    }
+	//Keenetic connections
+	$connections = SQLSelect("SELECT ID, TITLE, ADDRESS, TYPE, ROUTER_ID FROM keenetic_connections WHERE `TITLE` like '%" . DBSafe($data) . "%' OR `ADDRESS` like '%" . DBSafe($data) . "%' OR `TYPE` like '%" . DBSafe($data) . "%'  order by TITLE");
+	foreach($connections as $connection){
+		$routr = SQLSelectOne('SELECT TITLE FROM keenetic_routers WHERE ID="'.$connection['ROUTER_ID'].'"');
+		$res[]= '&nbsp;<span class="label label-info">'.$routr['TITLE'].'</span>&nbsp;<span class="label label-primary">connections</span>&nbsp;<a href="/panel/keenetic.html?md=keenetic&inst=adm&view_mode=info_keenetic_cnct&id=' . $connection['ID'] . '.html">' . $connection['TITLE']. ($connection['ADDRESS'] ? '<small style="color: gray;padding-left: 5px;"><i class="glyphicon glyphicon-arrow-right" style="font-size: .8rem;vertical-align: text-top;color: lightgray;"></i> ' . $connection['ADDRESS'] . '</small>' : '').'</a>';
     }
     return $res;
  }
@@ -672,6 +745,7 @@ $this->setProperty("rssi", $params["RSSI"]);';
   }
   SQLExec('DROP TABLE IF EXISTS keenetic_routers');
   SQLExec('DROP TABLE IF EXISTS keenetic_devices');
+  SQLExec('DROP TABLE IF EXISTS keenetic_connections');
   $this->delete_class("Keenetic");
   parent::uninstall();
  }
@@ -688,7 +762,7 @@ keenetic_routers -
 keenetic_devices - 
 */
   $data = <<<EOD
- keenetic_routers: ID int(10) unsigned NOT NULL auto_increment
+ keenetic_routers: ID int unsigned NOT NULL auto_increment
  keenetic_routers: TITLE varchar(100) NOT NULL DEFAULT ''
  keenetic_routers: ADDRESS varchar(50) NOT NULL DEFAULT ''
  keenetic_routers: MODEL varchar(20) NOT NULL DEFAULT ''
@@ -705,9 +779,11 @@ keenetic_devices -
  keenetic_routers: AUTO_REBOOT smallint unsigned NOT NULL DEFAULT 0
  keenetic_routers: UPDATED datetime
  keenetic_routers: REQ_PERIOD smallint unsigned NOT NULL DEFAULT 5
- keenetic_routers: REQ_UPDATE int(10) unsigned NOT NULL DEFAULT 0
- keenetic_devices: ID int(10) unsigned NOT NULL auto_increment
- keenetic_devices: ROUTER_ID int(10) NOT NULL DEFAULT '0'
+ keenetic_routers: REQ_UPDATE int unsigned NOT NULL DEFAULT 0
+ keenetic_routers: CNCT_SCRIPT text
+ 
+ keenetic_devices: ID int unsigned NOT NULL auto_increment
+ keenetic_devices: ROUTER_ID int NOT NULL DEFAULT '0'
  keenetic_devices: TITLE varchar(100) NOT NULL DEFAULT ''
  keenetic_devices: MAC varchar(20) NOT NULL DEFAULT ''
  keenetic_devices: IP varchar(20) NOT NULL DEFAULT ''
@@ -721,6 +797,19 @@ keenetic_devices -
  keenetic_devices: LINKED_PROPERTY varchar(100) NOT NULL DEFAULT ''
  keenetic_devices: LINKED_METHOD varchar(100) NOT NULL DEFAULT ''
  keenetic_devices: UPDATED datetime
+ 
+ keenetic_connections: ID int unsigned NOT NULL auto_increment
+ keenetic_connections: ROUTER_ID int NOT NULL DEFAULT '0'
+ keenetic_connections: CONN_ID varchar(100) NOT NULL DEFAULT ''
+ keenetic_connections: TITLE varchar(100) NOT NULL DEFAULT ''
+ keenetic_connections: ADDRESS varchar(20) NOT NULL DEFAULT ''
+ keenetic_connections: STATUS boolean NOT NULL DEFAULT 0
+ keenetic_connections: TYPE varchar(50) NOT NULL DEFAULT ''
+ keenetic_connections: LINKED_OBJECT varchar(100) NOT NULL DEFAULT ''
+ keenetic_connections: LINKED_PROPERTY varchar(100) NOT NULL DEFAULT ''
+ keenetic_connections: LINKED_METHOD varchar(100) NOT NULL DEFAULT ''
+ keenetic_connections: UPDATED datetime
+ 
 EOD;
   parent::dbInstall($data);
  }
@@ -825,6 +914,16 @@ function command($id, $data, $save=false){
 	return $response;
 }
  
+function changeConnection($id, $state){
+	$str = 'true';
+	if($state) $str = 'false';
+	if(is_numeric($id)) $connection = SQLSelectOne('SELECT * FROM keenetic_connections WHERE ID="'.$id.'"');
+	else $connection = SQLSelectOne('SELECT * FROM keenetic_connections WHERE TITLE="'.$id.'"');
+	$router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$connection['ROUTER_ID'].'"');
+	$response = $this->getdata($router, '', '{"interface":{"'.$connection['CONN_ID'].'":{"up":{"no":'.$str.'}}}}', true);
+	return $response;
+}
+ 
 function reboot($id){
 	if ($this->isIP($id)) $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
 	else $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$id.'"');
@@ -901,7 +1000,7 @@ function parse_data($router, $host, $interfaces, $wifies){
 		$rec['RSSI'] = $host['rssi']; //rssi
 	}
 	foreach($wifies as $iface){
-		if($cidwifi == $iface['id']){
+		if(isset($cidwifi) and $cidwifi == $iface['id']){
 			$wifiap = explode("/", $iface['id']);
 			$rec['FREQ'] = (int)substr($wifiap[0], -1)==1?'5ГГц':'2.4ГГц'; //Частота
 			$rec['NET'] = $iface['ssid']; //Имя точки доступа
@@ -934,7 +1033,7 @@ function backupWAN($interface){
 				$array['STATE'] = 1;
 				$array['NAME'] = $siface[$i]['description'];
 				$array['UPTIME'] = $siface[$i]['uptime'];
-				$array['IP'] = isset($siface[$i]['address']) ?? "";
+				$array['IP'] = $siface[$i]['address'] ?? "";
 				$array['WAN'] = $i;
 				break;
 			}
@@ -982,6 +1081,7 @@ function seconds2times($seconds){
 	$times[0] = $seconds;
 	return $times;
 }
+
 /*Обратимое шифрование методом "Двойного квадрата" (Reversible crypting of "Double square" method)
 * @param  String $input   Строка с исходным текстом
 * @param  bool   $decrypt Флаг для дешифрования

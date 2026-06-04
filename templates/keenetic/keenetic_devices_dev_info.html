@@ -91,6 +91,11 @@
 					[#endif ERRORS#]
 					<div class="visible-xs visible-sm" id="mobileIndicator"></div>
 					<div id="code_area" style="margin-top: 10px;">
+						[#if SETTINGS_CODEEDITOR_TURNONSETTINGS != 1#]
+							<div style="border: 1px solid #dddddd;border-radius: 5px;padding: 5px;margin-top: 10px;margin-bottom: 10px;background: #fffdc7;">
+								<#LANG_CODEEDITOR_NOTY_TURNOFF#>
+							</div>
+						[#endif SETTINGS_CODEEDITOR_TURNONSETTINGS#]
 						<div id="autosave_code_in_time_div" style="color: gray;font-style: italic;font-size: 1rem;display:none;margin-left: 5px;margin-bottom: 4px;">
 							<i class="glyphicon glyphicon-floppy-saved" style="vertical-align: top;"></i> <#LANG_CODEEDITOR_AUTOSAVE_CODE#> <span id="autosave_code_in_time"></span>. <#LANG_CODEEDITOR_AUTOSAVE_CODE_HELP#>
 						</div>

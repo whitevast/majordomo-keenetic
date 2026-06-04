@@ -50,7 +50,7 @@
 			$rec['AUTO_REBOOT'] = !empty(gr('reboot')) ? gr('reboot') : 0;
 			$rec['REQ_PERIOD'] = !empty(gr('period')) ? gr('period') : 5;
 			$rec['STATUS'] = 1;
-			$rec['INET_STATUS'] = $data['internet']['status']['internet'];
+			$rec['INET_STATUS'] = !empty($data['internet']['status']['internet']) ? $data['internet']['status']['internet'] : 0;
 			$rec['UPDATED'] = date('Y-m-d H:i:s');
 			$components = explode(",", $data['version']['ndw']['components']);
 			foreach($components as $name) {
@@ -122,7 +122,6 @@ else if($status > 1){ //если интернет есть и активно р�
    $sortby = gr('sortby');
    if ($sortby) $sort = $sortby;
    else $sort = "ID";
-   //$out['SORTBY'] = $sortby_keenetic_lan_devices;
    $properties=SQLSelect("SELECT * FROM keenetic_devices WHERE ROUTER_ID='".$rec['ID']."' ORDER BY ".$sort);
    $total=count($properties);
    for($i=0;$i<$total;$i++) {
@@ -152,11 +151,62 @@ else if($status > 1){ //если интернет есть и активно р�
       }
       if ($properties[$i]['LINKED_OBJECT'] && $properties[$i]['LINKED_PROPERTY']) {
        addLinkedProperty($properties[$i]['LINKED_OBJECT'], $properties[$i]['LINKED_PROPERTY'], $this->name);
+	   	   //Сразу запишем в свойство текущее значение
+	   setGlobal($properties[$i]['LINKED_OBJECT'].".".$properties[$i]['LINKED_PROPERTY'], $properties[$i]['STATUS']);
       }
      }
    }
    $out['PROPERTIES']=$properties;  
   }
+  
+  // Вкладка соединения
+  if ($this->tab=='cnct') {
+   $sortby = gr('sortby');
+   if ($sortby) $sort = $sortby;
+   else $sort = "ID";
+   $change = gr('change');
+   if ($change) {
+	$data = explode(",", $change);
+    $this->changeConnection($data[0], $data[1]);
+   }
+   $properties=SQLSelect("SELECT * FROM keenetic_connections WHERE ROUTER_ID='".$rec['ID']."' ORDER BY ".$sort);
+   $total=count($properties);
+   for($i=0;$i<$total;$i++) {
+    if ($this->mode=='update') {
+	  $old_title=$properties[$i]['TITLE'];
+	  $old_linked_object=$properties[$i]['LINKED_OBJECT'];
+      $old_linked_property=$properties[$i]['LINKED_PROPERTY'];
+      global ${'linked_object'.$properties[$i]['ID']};
+      $properties[$i]['LINKED_OBJECT']=trim(${'linked_object'.$properties[$i]['ID']});
+      global ${'linked_property'.$properties[$i]['ID']};
+      $properties[$i]['LINKED_PROPERTY']=trim(${'linked_property'.$properties[$i]['ID']});
+      global ${'linked_method'.$properties[$i]['ID']};
+      $properties[$i]['LINKED_METHOD']=trim(${'linked_method'.$properties[$i]['ID']});
+	  // Если юзер удалил привязанные свойство и метод, но забыл про объект, то очищаем его.
+      if ($properties[$i]['LINKED_OBJECT'] != '' && ($properties[$i]['LINKED_PROPERTY'] == '' && $properties[$i]['LINKED_METHOD'] == '')) {
+          $properties[$i]['LINKED_OBJECT'] = '';
+      }
+      SQLUpdate('keenetic_connections', $properties[$i]);
+      if ($old_linked_object && $old_linked_object!=$properties[$i]['LINKED_OBJECT'] || $old_linked_property && $old_linked_property!=$properties[$i]['LINKED_PROPERTY']) {
+       removeLinkedProperty($old_linked_object, $old_linked_property, $this->name);
+      }
+      if ($properties[$i]['LINKED_OBJECT'] && $properties[$i]['LINKED_PROPERTY']) {
+       addLinkedProperty($properties[$i]['LINKED_OBJECT'], $properties[$i]['LINKED_PROPERTY'], $this->name);
+	   //Сразу запишем в свойство текущее значение
+	   setGlobal($properties[$i]['LINKED_OBJECT'].".".$properties[$i]['LINKED_PROPERTY'], $properties[$i]['STATUS']);
+      }
+	  $code = gr('code');
+	  if($rec['CNCT_SCRIPT'] != $code){
+		$rec['CNCT_SCRIPT'] = $code;
+		$rec['UPDATED'] = date('Y-m-d H:i:s');
+		SQLUpdate('keenetic_routers', $rec);
+	  }
+     }
+   }
+   $out['SCRIPT'] = $rec['CNCT_SCRIPT'];
+   $out['PROPERTIES']=$properties;  
+  }
+  
   //Настройка DNS
 if ($this->tab=='dns') {
 	$delete_domain = gr('delete_domain');

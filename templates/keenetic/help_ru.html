@@ -223,6 +223,29 @@ $result = $keenetic->api(array('id'=>1,'path'=>'show/interface','data'=>''));</p
 		</div>
       </div>
 	</div>
+	<div class="panel panel-info">
+      <div class="panel-heading">
+         <a data-toggle="collapse" data-parent="#accordion" href="#cnct_help">Подключения</a>
+      </div>
+      <div class="panel-body collapse" id="cnct_help">
+        <div style="width:900px">
+		  <p>Используется для отслеживания статуса и управления подключениями.</p>
+		  <p>Код из поля внизу выполняется при изменении статуса любого подключения.
+		  Можно использовать следующие переменные:<br>
+		  <b>$name</b> - имя подключения;<br>
+		  <b>$state</b> - статус подключения.<br></p>
+		  <strong>Пример:</strong><br>
+			<pre>if($state){ //если соединение установлено
+ $text = " установлено";
+}
+else{ //если соединение потеряно
+ $text = " потеряно";
+}
+say("Соединение с " . $name . $text, 2);</pre>
+		  <p>Через привязанное свойство также можно управлять подключениями, то есть включать и выключать их.</p>
+		</div>
+      </div>
+   </div>
     <div class="panel panel-info">
       <div class="panel-heading">
          <a data-toggle="collapse" data-parent="#accordion" href="#dns_help">Управление DNS</a>
