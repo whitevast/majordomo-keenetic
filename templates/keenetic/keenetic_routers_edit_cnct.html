@@ -1,3 +1,49 @@
+<style>
+.material-switch > input[type="checkbox"] {
+    display: none;   
+}
+
+.material-switch > label {
+    cursor: pointer;
+    height: 0px;
+    position: relative; 
+    width: 40px;  
+}
+
+.material-switch > label::before {
+    background: rgb(0, 0, 0);
+    box-shadow: inset 0px 0px 10px rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    content: '';
+    height: 16px;
+    margin-top: -8px;
+    position:absolute;
+    opacity: 0.3;
+    transition: all 0.4s ease-in-out;
+    width: 40px;
+}
+.material-switch > label::after {
+    background: rgb(255, 255, 255);
+    border-radius: 16px;
+    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.3);
+    content: '';
+    height: 24px;
+    left: -4px;
+    margin-top: -8px;
+    position: absolute;
+    top: -4px;
+    transition: all 0.3s ease-in-out;
+    width: 24px;
+}
+.material-switch > input[type="checkbox"]:checked + label::before {
+    background: inherit;
+    opacity: 0.5;
+}
+.material-switch > input[type="checkbox"]:checked + label::after {
+    background: inherit;
+    left: 20px;
+}
+</style>
 <form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
 [#if OK#]
 <div class="alert alert-success"><#LANG_DATA_SAVED#></div>
@@ -33,19 +79,38 @@
 <table class="table table-striped">
  <tr>
   <td><b><a href="?data_source=&view_mode=edit_keenetic_routers&id=<#ID#>&tab=cnct&sortby=TITLE"><#LANG_TITLE#></a></br></td>
+  <td><b><a href="?data_source=&view_mode=edit_keenetic_routers&id=<#ID#>&tab=cnct&sortby=ENABLE">Включено</a></br></td>
   <td><b><a href="?data_source=&view_mode=edit_keenetic_routers&id=<#ID#>&tab=cnct&sortby=STATUS">Статус</a><br></td>
-    <td><b><a href="?data_source=&view_mode=edit_keenetic_routers&id=<#ID#>&tab=cnct&sortby=ADDRESS">Адрес</a><br></td>
+  <td><b><a href="?data_source=&view_mode=edit_keenetic_routers&id=<#ID#>&tab=cnct&sortby=ADDRESS">Адрес</a><br></td>
   <td><b><a href="?data_source=&view_mode=edit_keenetic_routers&id=<#ID#>&tab=cnct&sortby=TYPE">&nbsp;Тип&nbsp;</a><br></td>
   <td><b><#LANG_LINKED_OBJECT#><br></td>
   <td><b><#LANG_LINKED_PROPERTY#><br></td>
   <td><b><#LANG_METHOD#><br></td>
   <td valign="top"><#LANG_UPDATED#></td>
  </tr>
+ <script language="javascript">
+	function changeState(id) {
+		$.ajax({
+			url: '/ajax/keenetic.html?changeconn=1&id='+id,
+			cache: false,
+			success: function(response) {
+				const checkbox = document.getElementById('state' + id);
+				checkbox.checked = response.state;
+			}
+		});
+	};
+</script>
  [#begin PROPERTIES#]
  <tr>
   <td valign="top">[#TITLE#]</td>
-  <td class="text-center">[#if STATUS>0#]<a href="?id=<#ID#>&tab=<#TAB#>&view_mode=<#VIEW_MODE#>&change=[#ID#],0" onclick="return confirm('Отключить?');" class="label label-success" title="Статус подключения">CONNECTED</a>
-		[#else#]<a href="?id=<#ID#>&tab=<#TAB#>&view_mode=<#VIEW_MODE#>&change=[#ID#],1" onclick="return confirm('Подключить?');" class="label label-danger" title="Статус подключения">DISCONNECTED</a>
+   <td>
+   <div class="material-switch pull-right">
+		<input id="state[#ID#]" name="someSwitchOption[#ID#]" type="checkbox" [#if STATE="1"#] checked[#endif#] onchange="changeState('[#ID#]')";/>
+		<label for="state[#ID#]" class="label-success"></label>
+	</div>
+ </td>
+  <td class="text-center">[#if STATUS>0#]<span class="label label-success" title="Статус подключения">CONNECTED</a>
+		[#else#]<span class="label label-danger" title="Статус подключения">DISCONNECTED</a>
 		[#endif STATUS#]</td>
   <td valign="top">[#ADDRESS#]</td>
   <td valign="top">[#TYPE#]</td>
@@ -58,9 +123,10 @@
  [#end PROPERTIES#]
 </table> 
 </div>
-<div class="col-lg-5 panel panel-info">
-    <div class="panel-body">	
-	Код из этого поля выполняется при изменении статуса любого подключения.<br>
+<div class="col-lg-6 panel panel-info">
+    <div class="panel-body">
+	<p>Включение/выключение подключения тумблером работает сразу, <b>без нажатия</b> кнопки "Сохранить".</p>
+	Код из поля ниже выполняется при изменении статуса любого подключения.<br>
 	Можно использовать следующие переменные:<br>
 	<b>$name</b> - имя подключения;<br>
 	<b>$state</b> - статус подключения.<br>

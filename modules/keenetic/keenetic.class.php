@@ -171,7 +171,15 @@ function admin(&$out) {
 */
 function usual(&$out) {
 	//print_r($this);
-	print(gr('mobile'));
+	$changeconn = gr('changeconn');
+	if($changeconn){
+		header("HTTP/1.0: 200 OK\n");
+		header('Content-Type: application/json');
+		$id = gr('id');
+		$state = $this->changeConnection($id, 2);
+		echo '{"state":'.(int)$state.'}';
+		exit;
+	}
  $this->admin($out);
 }
 
@@ -500,6 +508,11 @@ function api($params) {
 							$connection['TYPE'] = $connections[$connid]['type'];
 							$update = 1;
 						}
+						$stateconn = $connections[$connid]['state'] == "up" ? 1 : 0;
+						if($connection['STATE'] != $stateconn){
+							$connection['STATE'] = $stateconn;
+							$update = 1;
+						}
 						$state = $connections[$connid]['connected'] == "yes" ? 1 : 0;
 						if($connection['STATUS'] != $state){
 							$connection['STATUS'] = $state;
@@ -532,9 +545,10 @@ function api($params) {
 						$newconn['ROUTER_ID'] = $router['ID'];
 						$newconn['CONN_ID'] = $connection['id'];
 						$newconn['TITLE'] = $connection['description'] ?? '';
+						$newconn['STATUS'] = $connection['connected'] == "yes" ? 1 : 0;
+						$newconn['STATE'] = $connection['state'] == "up" ? 1 : 0;
 						$newconn['ADDRESS'] = $connection['address'] ?? '';
 						$newconn['TYPE'] = $connection['type'] ?? '';
-						$newconn['STATUS'] = $connection['connected'] == "yes" ? 1 : 0;
 						$newconn['UPDATED'] = date('Y-m-d H:i:s');
 						SQLInsert('keenetic_connections', $newconn);
 					}
@@ -802,8 +816,9 @@ keenetic_devices -
  keenetic_connections: ROUTER_ID int NOT NULL DEFAULT '0'
  keenetic_connections: CONN_ID varchar(100) NOT NULL DEFAULT ''
  keenetic_connections: TITLE varchar(100) NOT NULL DEFAULT ''
- keenetic_connections: ADDRESS varchar(20) NOT NULL DEFAULT ''
+ keenetic_connections: STATE boolean NOT NULL DEFAULT 0
  keenetic_connections: STATUS boolean NOT NULL DEFAULT 0
+ keenetic_connections: ADDRESS varchar(20) NOT NULL DEFAULT ''
  keenetic_connections: TYPE varchar(50) NOT NULL DEFAULT ''
  keenetic_connections: LINKED_OBJECT varchar(100) NOT NULL DEFAULT ''
  keenetic_connections: LINKED_PROPERTY varchar(100) NOT NULL DEFAULT ''
@@ -858,7 +873,7 @@ EOD;
 		$resp = $this->getdata($router, 'system/configuration/save', '{}');
 		if($resp['status']['0']['message'] == "saving configuration...") $this->WriteLog("Конфигурация сохранена");
 	}
-	return json_decode($html, 1);
+	return json_decode($html, true);
  }
  
 function auth($ip, $login, $password){
@@ -916,12 +931,17 @@ function command($id, $data, $save=false){
  
 function changeConnection($id, $state){
 	$str = 'true';
-	if($state) $str = 'false';
 	if(is_numeric($id)) $connection = SQLSelectOne('SELECT * FROM keenetic_connections WHERE ID="'.$id.'"');
 	else $connection = SQLSelectOne('SELECT * FROM keenetic_connections WHERE TITLE="'.$id.'"');
+	if(($state == 2 and !$connection['STATE']) or $state == 1) $str = 'false';
 	$router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.$connection['ROUTER_ID'].'"');
 	$response = $this->getdata($router, '', '{"interface":{"'.$connection['CONN_ID'].'":{"up":{"no":'.$str.'}}}}', true);
-	return $response;
+	$message = explode(":", $response['interface'][$connection['CONN_ID']]['up']['status'][0]['message']);
+	if($message[1] == " interface is up.") $status = true;
+	else if($message[1] == " interface is down.") $status = false;
+	$connection['STATE'] = (int)$status;
+	SQLUpdate('keenetic_connections', $connection);
+	return $status;
 }
  
 function reboot($id){
