@@ -17,28 +17,16 @@ if (!isset($tmp['ID']))
    exit; // no devices added -- no need to run this cycle
 echo date("H:i:s") . " running " . basename(__FILE__) . PHP_EOL;
 $latest_check=0;
-$checkEvery = 1;
 $timeUpdate = 0;
-//Добавляем отсутствующие столбцы в таблицу
-$query = mysqli_fetch_all(SQLExec("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'keenetic_routers'"), MYSQLI_NUM);
-$add = 1;
-foreach($query as $name) {
-	if($name[0] == 'HREF_FW') $add = 0;
-}
-if($add){
-	SQLExec("ALTER TABLE `keenetic_routers` ADD `HREF_FW` TEXT NOT NULL DEFAULT '' AFTER NEW_FIRMWARE");
-}
 while (1)
 {
    if(time() - $timeUpdate > 20){
      setGlobal((str_replace('.php', '', basename(__FILE__))) . 'Run', time(), 1);
 	 $timeUpdate = time();
    }
-   if ((time()-$latest_check)>=$checkEvery) {
-    $latest_check=time();
-    echo date('Y-m-d H:i:s').' Polling devices...';
-    $keenetic_module->processCycle();
-   }
+   
+   $keenetic_module->processCycle();
+   
    if (file_exists('./reboot') || IsSet($_GET['onetime']))
    {
      //$db->Disconnect();

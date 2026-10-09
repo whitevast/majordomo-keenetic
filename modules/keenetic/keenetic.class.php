@@ -186,13 +186,14 @@ function usual(&$out) {
 
 function api($params) {
     $id = $params['id'];
+	if(!isset($params['path'])) $params['path'] = '';
     if ($this->isIP($id)) {
         $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ADDRESS="'.$id.'"');
     } else {
         $router = SQLSelectOne('SELECT * FROM keenetic_routers WHERE ID="'.(int)$id.'"');
     }
     if (!isset($router['ID'])) return false;
-    $data = $this->getdata($router, $params['path'], $params['data']);
+    $data = $this->getdata($router, $params['path'], $params['data'], true);
     return $data;
 }
 
@@ -484,59 +485,65 @@ function api($params) {
 						else eval($code);
 				}
 				//Соединения
-				$connectionindb = SQLSelect("SELECT * FROM keenetic_connections WHERE ROUTER_ID='".$router['ID']."'");
-				$connections = [];
-				$update = 0;
-				foreach($getdata['show']['interface'] as $connection){
-					if(!in_array($connection['type'], ["GigabitEthernet", "FastEthernet", "Port", "Vlan", "AccessPoint", "WifiMaster", "WifiStation", "Bridge"])){
-						$connections[$connection['id']] = $connection;
+				if($getdata['show']['system']['uptime'] > 180){ //если после загрузки роутера прошло более трех минут
+					$connectionindb = SQLSelect("SELECT * FROM keenetic_connections WHERE ROUTER_ID='".$router['ID']."'");
+					$connections = [];
+					$update = 0;
+					foreach($getdata['show']['interface'] as $connection){
+						if(!in_array($connection['type'], ["GigabitEthernet", "FastEthernet", "Port", "Vlan", "AccessPoint", "WifiMaster", "WifiStation", "Bridge"])){
+							$connections[$connection['id']] = $connection;
+						}
 					}
-				}
-				//dprint($connections,0);
-				foreach($connectionindb as $connection){
-					if(isset($connections[$connection['CONN_ID']])){
-						$connid = $connection['CONN_ID'];
-						if($connection['TITLE'] != $connections[$connid]['description']){
-							$connection['TITLE'] = $connections[$connid]['description'] ?? '';
-							$update = 1;
-						}
-						if(isset($connections[$connid]['address']) and $connection['ADDRESS'] != $connections[$connid]['address']){
-							$connection['ADDRESS'] = $connections[$connid]['address'] ?? '';
-							$update = 1;
-						}
-						if($connection['TYPE'] != $connections[$connid]['type']){
-							$connection['TYPE'] = $connections[$connid]['type'];
-							$update = 1;
-						}
-						$stateconn = $connections[$connid]['state'] == "up" ? 1 : 0;
-						if($connection['STATE'] != $stateconn){
-							$connection['STATE'] = $stateconn;
-							$update = 1;
-						}
-						$state = $connections[$connid]['connected'] == "yes" ? 1 : 0;
-						if($connection['STATUS'] != $state){
-							$connection['STATUS'] = $state;
-							$this->setProperty($connection, $state); //обновляем свойство
-							$name = $connection['TITLE'];
-							$code = $router['CNCT_SCRIPT'];
-							$errors = php_syntax_error($code);
-							if ($errors){
-								$line = preg_replace('/[^0-9]/', '', substr(stristr($errors, 'php on line '), 0, 18));
-								$errorStr = explode('Parse error: ', htmlspecialchars(strip_tags(nl2br($errors))));
-								$errorStr = explode('Errors parsing', $errorStr[1]);
-								$errorStr = explode(' in ', $errorStr[0]);
-								$errors = $errorStr[0].' on line '.$line;
-								$this->WriteLog("Ошибка в коде: ".$code);
-								registerError('Keenetic', "Error in code: " . $code. PHP_EOL . PHP_EOL . $errors . PHP_EOL);
+					//dprint($connections,0);
+					foreach($connectionindb as $connection){
+						if(isset($connections[$connection['CONN_ID']])){
+							$connid = $connection['CONN_ID'];
+							if($connection['TITLE'] != $connections[$connid]['description']){
+								$connection['TITLE'] = $connections[$connid]['description'] ?? '';
+								$update = 1;
 							}
-							else eval($code);
-							$update = 1;
+							if(isset($connections[$connid]['address']) and $connection['ADDRESS'] != $connections[$connid]['address']){
+								$connection['ADDRESS'] = $connections[$connid]['address'] ?? '';
+								$update = 1;
+							}
+							if($connection['TYPE'] != $connections[$connid]['type']){
+								$connection['TYPE'] = $connections[$connid]['type'];
+								$update = 1;
+							}
+							$stateconn = $connections[$connid]['state'] == "up" ? 1 : 0;
+							if($connection['STATE'] != $stateconn){
+								$connection['STATE'] = $stateconn;
+								$update = 1;
+							}
+							$state = $connections[$connid]['connected'] == "yes" ? 1 : 0;
+							if($connection['STATUS'] != $state){
+								$connection['STATUS'] = $state;
+								$this->setProperty($connection, $state); //обновляем свойство
+								$name = $connection['TITLE'];
+								$code = $router['CNCT_SCRIPT'];
+								$errors = php_syntax_error($code);
+								if ($errors){
+									$line = preg_replace('/[^0-9]/', '', substr(stristr($errors, 'php on line '), 0, 18));
+									$errorStr = explode('Parse error: ', htmlspecialchars(strip_tags(nl2br($errors))));
+									$errorStr = explode('Errors parsing', $errorStr[1]);
+									$errorStr = explode(' in ', $errorStr[0]);
+									$errors = $errorStr[0].' on line '.$line;
+									$this->WriteLog("Ошибка в коде: ".$code);
+									registerError('Keenetic', "Error in code: " . $code. PHP_EOL . PHP_EOL . $errors . PHP_EOL);
+								}
+								else eval($code);
+								$update = 1;
+							}
+							if($update){
+								$connection['UPDATED'] = date('Y-m-d H:i:s');
+								SQLUpdate('keenetic_connections', $connection);
+							}
+							unset($connections[$connid]);
+						} else { //Если подключения из БД нет в подключениях, отданных роутером, удаляем подключение из БД
+							if($connection['LINKED_OBJECT']) continue; //если есть привязанный объект, не удаляем
+							SQLExec("DELETE FROM keenetic_connections WHERE ID='".$connection['ID']."'");
+							$this->WriteLog("Подключение ".$connection['TITLE']." удалено c ".$router['TITLE'].".");
 						}
-						if($update){
-							$connection['UPDATED'] = date('Y-m-d H:i:s');
-							SQLUpdate('keenetic_connections', $connection);
-						}
-						unset($connections[$connid]);
 					}
 				}
 				//Добавим новые соединения в базу
@@ -551,6 +558,7 @@ function api($params) {
 						$newconn['TYPE'] = $connection['type'] ?? '';
 						$newconn['UPDATED'] = date('Y-m-d H:i:s');
 						SQLInsert('keenetic_connections', $newconn);
+						$this->WriteLog("Подключение ".$connection['TITLE']." добавлено на ".$router['TITLE'].".");
 					}
 				}
 				
@@ -562,8 +570,17 @@ function api($params) {
 				}
 				foreach ($devices as $valuedev){
 					if($valuedev['name'] == "") $valuedev['name'] = $valuedev['hostname'];
-					if(!isset($valuedev['link'])) $valuedev['link'] = 0;
-					else if($valuedev['link'] == "up") $valuedev['link'] = 1;
+					if(!isset($valuedev['link'])){
+						if(isset($valuedev['ap']) or isset($valuedev['mws']['ap'])){ //WiFi устройства при отключении сразу теряют линк, проводные еще долго держат
+							$valuedev['link'] = 0;
+						} else {
+							$valuedev['link'] = (int)$valuedev['active']; //при этом active отключается через минуту
+						}
+					}
+					else if($valuedev['link'] == "up"){
+						if(empty($valuedev['active'])) $valuedev['link'] = 0;
+						else $valuedev['link'] = 1;
+					}
 					else if($valuedev['link'] == "down") $valuedev['link'] = 0;
 					if($valuedev['ip'] == "0.0.0.0") $valuedev['link'] = 0;
 					$devmac[$valuedev['mac']] = $valuedev;
@@ -609,7 +626,7 @@ function api($params) {
 									$device = $this->getdata($router, '', '{"show":{"ip":{"hotspot":{"mac":"'.$value['MAC'].'"}}}}');
 									if(!$device) continue;
 									$device = $device['show']['ip']['hotspot']['host']['0'];
-									if(isset($device['link']) and $device['link'] == "up"){
+									if(isset($device['link']) and $device['link'] == "up" and !empty($device['active'])){
 										unset($devmac[$value['MAC']]); //удаляем устройства из массива, иначе оно будет считаться не числящимся в БД
 										continue;
 									}
@@ -771,10 +788,15 @@ $this->setProperty("rssi", $params["RSSI"]);';
 * @access private
 */
  function dbInstall($data) {
-/*
-keenetic_routers - 
-keenetic_devices - 
-*/
+ //Добавляем отсутствующие столбцы в таблицу
+ $query = mysqli_fetch_all(SQLExec("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'keenetic_routers'"), MYSQLI_NUM);
+ $add = 1;
+ foreach($query as $name) {
+ 	if($name[0] == 'HREF_FW') $add = 0;
+ }
+ if($add){
+ 	SQLExec("ALTER TABLE `keenetic_routers` ADD `HREF_FW` TEXT NOT NULL DEFAULT '' AFTER NEW_FIRMWARE");
+ }
   $data = <<<EOD
  keenetic_routers: ID int unsigned NOT NULL auto_increment
  keenetic_routers: TITLE varchar(100) NOT NULL DEFAULT ''

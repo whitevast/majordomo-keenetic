@@ -7,98 +7,97 @@
   }
   $table_name='keenetic_routers';
   $rec=SQLSelectOne("SELECT * FROM $table_name WHERE ID='$id'");
-  $rec['PASSWORD'] = $this->dsCrypt($rec['PASSWORD'], true);
   if ($this->tab=='') {
 	if ($rec['STATUS'] and $rec['FIRMWARE'] != $rec['NEW_FIRMWARE']) $rec['UPDATE'] = 1;
-   if ($this->mode=='update') {
-   $ok=1;
-  // step: default
-   $rec['TITLE']=gr('title');
-   $rec['ADDRESS']=gr('address');
-   $length = strlen($rec['ADDRESS']);
-   while(strrpos($rec['ADDRESS'], "/") == $length-1){ //убираем символы "/" в конце
-	$rec['ADDRESS']=substr($rec['ADDRESS'], 0, -1);
-	$length = strlen($rec['ADDRESS']);
-   } 
-   while(strpos($rec['ADDRESS'], "/") !== false){ //убираем все до и символы "/" в начале
-	$rec['ADDRESS']=substr($rec['ADDRESS'], strpos($rec['ADDRESS'], "/")+1);
-   }  
-   $rec['LOGIN']=gr('login');
-   $rec['PASSWORD']=$this->dsCrypt(gr('password'));
-   if (gr('no_update') == 1) $rec['HREF_FW'] = 1;
-   else if ($rec['HREF_FW'] == 1) $rec['HREF_FW'] = "";
-   if ($rec['TITLE']=='' or $rec['ADDRESS']=='' or $rec['LOGIN']=='' or $rec['PASSWORD']=='') {
-    if($rec['TITLE']=='') $out['ERR_ALERT']="Введите название устройства";
-	else if ($rec['ADDRESS']=='') $out['ERR_ALERT']="Введите адрес устройства";
-	else if ($rec['LOGIN']=='') $out['ERR_ALERT']="Введите имя пользователя";
-	else $out['ERR_ALERT']="Введите пароль";
-    $ok=0;
-   }
-   if(!isset($rec['ID']) and isset(SQLSelectOne("SELECT * FROM $table_name WHERE TITLE='".$rec['TITLE']."'")['ID'])){
-	   $out['ERR_ALERT']="Роутер с именем \"".$rec['TITLE']."\" уже существует в системе. Выберите другое имя.";
-	   $ok=0;
-   }
-    if($ok){
-		 $rec['COOKIES'] = $this->auth($rec['ADDRESS'],$rec['LOGIN'],$rec['PASSWORD']);
-		 if($rec['COOKIES']){
-			$data = $this->getdata($rec,"show",'{"version": {}, "identification": {}, "internet":{"status":{}}}');
-			if($data['version']['model'] == "Keenetic") $rec['MODEL'] = $data['version']['device'];
-			else $rec['MODEL'] = $data['version']['model'];
-			$rec['FIRMWARE'] = $data['version']['release'];
-			$rec['NEW_FIRMWARE'] = $rec['FIRMWARE'];
-			$rec['SERIAL'] = $data['identification']['serial'];
-			$rec['AUTO_REBOOT'] = !empty(gr('reboot')) ? gr('reboot') : 0;
-			$rec['REQ_PERIOD'] = !empty(gr('period')) ? gr('period') : 5;
-			$rec['STATUS'] = 1;
-			$rec['INET_STATUS'] = !empty($data['internet']['status']['internet']) ? $data['internet']['status']['internet'] : 0;
-			$rec['UPDATED'] = date('Y-m-d H:i:s');
-			$components = explode(",", $data['version']['ndw']['components']);
-			foreach($components as $name) {
-				if($name == 'mws') $rec['MWS'] = 1;
-			}
-			addClass($rec['TITLE'], "Keenetic");
-		 }
-		 else{
+	$rec['PASSWORD'] = $this->dsCrypt($rec['PASSWORD'], true);
+	if ($this->mode=='update') {
+		$ok=1;
+		$rec['TITLE']=gr('title');
+		$rec['ADDRESS']=gr('address');
+		$length = strlen($rec['ADDRESS']);
+		while(strrpos($rec['ADDRESS'], "/") == $length-1){ //убираем символы "/" в конце
+		$rec['ADDRESS']=substr($rec['ADDRESS'], 0, -1);
+		$length = strlen($rec['ADDRESS']);
+		} 
+		while(strpos($rec['ADDRESS'], "/") !== false){ //убираем все до и символы "/" в начале
+		$rec['ADDRESS']=substr($rec['ADDRESS'], strpos($rec['ADDRESS'], "/")+1);
+		}  
+		$rec['LOGIN']=gr('login');
+		$rec['PASSWORD']=$this->dsCrypt(gr('password'));
+		if (gr('no_update') == 1) $rec['HREF_FW'] = 1;
+		else if ($rec['HREF_FW'] == 1) $rec['HREF_FW'] = "";
+		if ($rec['TITLE']=='' or $rec['ADDRESS']=='' or $rec['LOGIN']=='' or $rec['PASSWORD']=='') {
+		if($rec['TITLE']=='') $out['ERR_ALERT']="Введите название устройства";
+		else if ($rec['ADDRESS']=='') $out['ERR_ALERT']="Введите адрес устройства";
+		else if ($rec['LOGIN']=='') $out['ERR_ALERT']="Введите имя пользователя";
+		else $out['ERR_ALERT']="Введите пароль";
+		$ok=0;
+		}
+		if(!isset($rec['ID']) and isset(SQLSelectOne("SELECT * FROM $table_name WHERE TITLE='".$rec['TITLE']."'")['ID'])){
+			$out['ERR_ALERT']="Роутер с именем \"".$rec['TITLE']."\" уже существует в системе. Выберите другое имя.";
 			$ok=0;
-			$out['ERR_ALERT']="Введены неверные данные или устройство недоступно";
-		 }
-	}
-  //UPDATING RECORD
-   if ($ok) {
-    if (isset($rec['ID'])) {
-	 //if(isset($rec['HREF_FW']) and $rec['HREF_FW'] !== 0) unset($rec['HREF_FW']);
-	 if(isset($rec['UPDATE'])) unset($rec['UPDATE']);
-     SQLUpdate($table_name, $rec); // update
-    } else {
-     $new_rec=1;
-     $rec['ID']=SQLInsert($table_name, $rec); // adding new record
-	 $inet['TITLE'] = "Интернет";
-	 $inet['MAC'] = "0.0.0.0.0.0";
-	 $inet['IP'] = "0.0.0.0";
-	 $inet['STATUS'] = $data['internet']['status']['internet'];
-	 $inet['TYPE_CONNECT'] = 0;
-	 $inet['REGISTERED'] = 1;
-	 $inet['ROUTER_ID'] = $rec['ID'];
-	 $inet['SCRIPT'] ='if(!$status){ //если интернет исчез;
-	
-}
-else if($status == 1){ //если интернет есть и активно основное подключение;
-
-}
-else if($status > 1){ //если интернет есть и активно резервное подключение;
-
+		}
+		if($ok){
+			$rec['COOKIES'] = $this->auth($rec['ADDRESS'],$rec['LOGIN'],$rec['PASSWORD']);
+			if($rec['COOKIES']){
+				$data = $this->getdata($rec,"show",'{"version": {}, "identification": {}, "internet":{"status":{}}}');
+				if($data['version']['model'] == "Keenetic") $rec['MODEL'] = $data['version']['device'];
+				else $rec['MODEL'] = $data['version']['model'];
+				$rec['FIRMWARE'] = $data['version']['release'];
+				$rec['NEW_FIRMWARE'] = $rec['FIRMWARE'];
+				$rec['SERIAL'] = $data['identification']['serial'];
+				$rec['AUTO_REBOOT'] = !empty(gr('reboot')) ? gr('reboot') : 0;
+				$rec['REQ_PERIOD'] = !empty(gr('period')) ? gr('period') : 5;
+				$rec['STATUS'] = 1;
+				$rec['INET_STATUS'] = !empty($data['internet']['status']['internet']) ? $data['internet']['status']['internet'] : 0;
+				$rec['UPDATED'] = date('Y-m-d H:i:s');
+				$components = explode(",", $data['version']['ndw']['components']);
+				foreach($components as $name) {
+					if($name == 'mws') $rec['MWS'] = 1;
+				}
+				addClass($rec['TITLE'], "Keenetic");
+			}
+			else{
+				$ok=0;
+				$out['ERR_ALERT']="Введены неверные данные или устройство недоступно";
+			}
+		}
+		//UPDATING RECORD
+		if ($ok) {
+			if (isset($rec['ID'])) {
+				//if(isset($rec['HREF_FW']) and $rec['HREF_FW'] !== 0) unset($rec['HREF_FW']);
+				if(isset($rec['UPDATE'])) unset($rec['UPDATE']);
+					SQLUpdate($table_name, $rec); // update
+			} else {
+				$new_rec=1;
+				$rec['ID']=SQLInsert($table_name, $rec); // adding new record
+				$inet['TITLE'] = "Интернет";
+				$inet['MAC'] = "0.0.0.0.0.0";
+				$inet['IP'] = "0.0.0.0";
+				$inet['STATUS'] = $data['internet']['status']['internet'];
+				$inet['TYPE_CONNECT'] = 0;
+				$inet['REGISTERED'] = 1;
+				$inet['ROUTER_ID'] = $rec['ID'];
+				$inet['SCRIPT'] ='if(!$status){ //если интернет исчез;
+			
+}			
+el		e if	($status == 1){ //если интернет есть и активно основное подключение;
+			
+}			
+el		e if	($status > 1){ //если интернет есть и активно резервное подключение;
+			
 }';
-	 $inet['UPDATED'] = date('Y-m-d H:i:s');
-	 SQLInsert('keenetic_devices', $inet);
-    }
-    $out['OK']=1;
-	setGlobal('cycle_keeneticControl','restart');
-   } else {
-    $out['ERR']=1;
-   }
-   $rec['PASSWORD'] = $this->dsCrypt($rec['PASSWORD'], true);
-  }
-}
+				$inet['UPDATED'] = date('Y-m-d H:i:s');
+				SQLInsert('keenetic_devices', $inet);
+			}
+			$out['OK']=1;
+			setGlobal('cycle_keeneticControl','restart');
+		} else {
+			$out['ERR']=1;
+		}
+		$rec['PASSWORD'] = $this->dsCrypt($rec['PASSWORD'], true);
+	}
+ }
   // Вкладка устройств
   if ($this->tab=='data') {
    //dataset2
